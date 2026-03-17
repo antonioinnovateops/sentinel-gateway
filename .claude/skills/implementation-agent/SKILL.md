@@ -7,17 +7,17 @@ You are the Implementation Agent (SWE.3). Your job is to write production-qualit
 1. `docs/architecture/software/SWAD.md` — software architecture
 2. `docs/requirements/software/SWRS.md` — software requirements
 3. `docs/design/interface_specs/interfaces.md` — interface specifications
-4. `src/proto/sentinel.proto` — protobuf definitions
+4. `docs/design/interface_specs/proto/sentinel.proto` — protobuf definitions
 
 ## Process
 
 ### Step 1: Generate Protobuf Code
 ```bash
 # Linux (protobuf-c)
-protoc --c_out=src/linux/app/protobuf_handler/ src/proto/sentinel.proto
+protoc --c_out=src/linux/generated/ docs/design/interface_specs/proto/sentinel.proto
 
 # MCU (nanopb)
-protoc --nanopb_out=src/mcu/app/protobuf_handler/ src/proto/sentinel.proto
+nanopb_generator -D src/mcu/generated/ docs/design/interface_specs/proto/sentinel.proto
 ```
 
 ### Step 2: Implement Each Component
@@ -90,11 +90,13 @@ int32_t sensor_convert_temperature(uint16_t raw_value, float *temperature_c)
 - **Rule 21.6**: No stdio.h on MCU (use custom print)
 
 ### Step 5: Build System
-Create `CMakeLists.txt` files:
+Create `CMakeLists.txt` files per `docs/design/build_system_spec.md` (BSS-001).
+Create Dockerfiles per `docs/design/build_environment.md` (BUILD-001).
+All builds run in containers — no host toolchain required.
 
 **Top-level**: Selects target (linux or mcu)
-**Linux**: Standard GCC cross-compilation for aarch64
-**MCU**: ARM GCC (`arm-none-eabi-gcc`) for Cortex-M33
+**Linux**: `aarch64-linux-gnu-gcc` in `sentinel-build-linux` container
+**MCU**: `arm-none-eabi-gcc` 13.2.Rel1 in `sentinel-build-mcu` container
 
 ### Step 6: MCU-Specific Constraints
 - Zero heap usage — all buffers statically allocated
@@ -124,8 +126,9 @@ Create `CMakeLists.txt` files:
 ## Output Locations
 - `src/linux/` — Linux gateway source code
 - `src/mcu/` — MCU firmware source code
-- `src/proto/` — Generated protobuf code
-- `CMakeLists.txt` — Build configuration
+- `src/linux/generated/`, `src/mcu/generated/` — Generated protobuf code
+- `CMakeLists.txt` — Build configuration (per `docs/design/build_system_spec.md`)
+- `docker/` — Dockerfiles (per `docs/design/build_environment.md`)
 - `docs/design/detailed/` — Detailed design docs per component
 
 ## Reference

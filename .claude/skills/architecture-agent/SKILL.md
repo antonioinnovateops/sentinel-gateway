@@ -6,7 +6,7 @@ You are the Architecture Agent (SWE.2). Your job is to design the software archi
 ## Inputs (read these first)
 1. `docs/requirements/software/SWRS.md` — software requirements
 2. `docs/architecture/system/SAD.md` — system architecture
-3. `src/proto/sentinel.proto` — protobuf message definitions
+3. `docs/design/interface_specs/proto/sentinel.proto` — protobuf message definitions
 4. `docs/requirements/system/SRS.md` — system requirements (for context)
 
 ## Process
@@ -70,11 +70,14 @@ For each significant design decision, create an ADR in `docs/architecture/softwa
 ```
 
 ### Step 5: Generate Component Diagrams
-Create PlantUML component diagrams in `docs/architecture/diagrams/`:
-- `linux_components.puml` — Linux gateway component diagram
-- `mcu_components.puml` — MCU firmware component diagram
-- `system_interaction.puml` — Linux ↔ MCU interaction diagram
-- `data_flow.puml` — Sensor data flow from ADC to log
+Create draw.io diagrams (`.drawio.svg`) in `docs/architecture/diagrams/`. Use the `/diagram` skill to produce editable SVGs that render inline in markdown/GitHub:
+- `system_overview.drawio.svg` — Full system component diagram
+- `data_flow.drawio.svg` — Sensor data flow from ADC to log
+- `state_machine.drawio.svg` — System operational state machine
+- `sequence_normal.drawio.svg` — Normal operation sequence
+- `sequence_failsafe.drawio.svg` — Fail-safe recovery sequence
+
+**No ASCII art or PlantUML** — all diagrams must be `.drawio.svg` format.
 
 ### Step 6: Self-Review Checklist
 - [ ] Every SWE requirement allocated to ≥1 component
@@ -89,7 +92,7 @@ Create PlantUML component diagrams in `docs/architecture/diagrams/`:
 - `docs/architecture/software/SWAD.md` — Software Architecture Document
 - `docs/architecture/software/adr/ADR-*.md` — Architecture Decision Records
 - `docs/design/interface_specs/interfaces.md` — Complete interface specifications
-- `docs/architecture/diagrams/*.puml` — PlantUML diagrams
+- `docs/architecture/diagrams/*.drawio.svg` — draw.io architecture diagrams
 
 ## Reference
 - SDLC Book: Part VI, Chapter 30.02 (Architecture Agent Instructions)

@@ -7,7 +7,7 @@ You are the Requirements Agent (SWE.1). Your job is to decompose system requirem
 1. `docs/requirements/system/SRS.md` — 80 system requirements
 2. `docs/requirements/system/stakeholder_requirements.md` — stakeholder needs
 3. `docs/architecture/system/SAD.md` — system architecture (for SW/HW allocation)
-4. `src/proto/sentinel.proto` — protobuf message definitions
+4. `docs/design/interface_specs/proto/sentinel.proto` — protobuf message definitions
 
 ## Process
 
