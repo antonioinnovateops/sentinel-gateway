@@ -1,0 +1,32 @@
+@startuml system_context
+!theme plain
+title Sentinel Gateway — System Context (C4 Level 1)
+
+skinparam rectangle {
+    BackgroundColor<<system>> #438DD5
+    FontColor<<system>> white
+    BackgroundColor<<external>> #999999
+    FontColor<<external>> white
+}
+
+actor "Maintenance\nEngineer" as engineer
+actor "Sensor\nDevices" as sensors
+actor "Actuator\nDevices" as actuators
+
+rectangle "Sentinel Gateway\nSystem" <<system>> as gateway {
+}
+
+rectangle "QEMU Host\n(Vast.ai Server)" <<external>> as qemu
+
+engineer --> gateway : "TCP:5002\nDiagnostic CLI"
+sensors --> gateway : "ADC (0-3.3V)\n4 channels"
+gateway --> actuators : "PWM (25kHz)\n2 channels"
+gateway --> qemu : "Runs inside"
+
+note right of gateway
+  Dual-processor embedded system:
+  • Linux ARM64 (gateway logic)
+  • STM32U575 (real-time I/O)
+  • Connected via USB CDC-ECM
+end note
+@enduml

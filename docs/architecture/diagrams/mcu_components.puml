@@ -1,0 +1,63 @@
+@startuml mcu_components
+!theme plain
+title MCU Firmware — Component Diagram
+
+skinparam component {
+    BackgroundColor<<app>> #85BBF0
+    BackgroundColor<<hal>> #F0C085
+    BackgroundColor<<lib>> #C0C0C0
+    BackgroundColor<<safety>> #FF8888
+}
+
+package "Application Layer" {
+    component "sensor_acquisition" <<app>> as sa
+    component "actuator_control" <<safety>> as ac
+    component "health_reporter" <<app>> as hr
+    component "config_store" <<app>> as cs
+    component "protobuf_handler\n(nanopb)" <<lib>> as pb
+    component "tcp_stack\n(lwIP)" <<lib>> as tcp
+    component "watchdog_mgr" <<safety>> as wdg
+}
+
+package "HAL Layer" {
+    component "adc_driver" <<hal>> as adc
+    component "pwm_driver" <<hal>> as pwm
+    component "gpio_driver" <<hal>> as gpio
+    component "usb_cdc" <<hal>> as usb
+    component "flash_driver" <<hal>> as flash
+    component "iwdg_driver" <<hal>> as iwdg
+}
+
+package "Main Loop" {
+    component "main_loop" as main
+}
+
+' Application dependencies
+sa --> adc : raw values
+sa --> pb : encode
+ac --> pwm : set duty
+ac --> pb : decode/encode
+ac --> cs : read limits
+hr --> pb : encode
+hr --> tcp : send
+cs --> flash : read/write
+tcp --> usb : network I/O
+wdg --> iwdg : feed/init
+
+' Main loop orchestration
+main --> sa : process()
+main --> ac : process_cmd()
+main --> hr : check timeout
+main --> tcp : poll()
+main --> wdg : feed()
+
+note bottom of ac #FFCCCC
+  **ASIL-B** Safety-Critical
+  Multi-layer validation:
+  1. Decode check
+  2. Range validation
+  3. Limit clamping
+  4. Output readback
+  5. Comm timeout → fail-safe
+end note
+@enduml

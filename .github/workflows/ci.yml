@@ -1,0 +1,125 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-linux:
+    name: Build Linux Gateway
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake gcc g++ \
+            libprotobuf-c-dev protobuf-c-compiler protobuf-compiler \
+            cppcheck
+
+      - name: Generate protobuf code
+        run: |
+          mkdir -p src/linux/app/protobuf_handler
+          protoc-c --c_out=src/linux/app/protobuf_handler \
+            -Isrc/proto src/proto/sentinel.proto
+
+      - name: Build
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DBUILD_LINUX=ON -DBUILD_MCU=OFF -DBUILD_TESTS=ON
+          make -j$(nproc)
+
+      - name: Run unit tests
+        run: |
+          cd build
+          ctest --output-on-failure
+
+  build-mcu:
+    name: Build MCU Firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi cmake
+
+      - name: Install nanopb
+        run: |
+          git clone --depth 1 https://github.com/nanopb/nanopb.git tools/nanopb
+
+      - name: Generate protobuf code
+        run: |
+          mkdir -p src/mcu/app/protobuf_handler
+          cd tools/nanopb/generator
+          python3 nanopb_generator.py \
+            -I ../../../src/proto \
+            ../../../src/proto/sentinel.proto \
+            -D ../../../src/mcu/app/protobuf_handler
+
+      - name: Build
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DBUILD_LINUX=OFF -DBUILD_MCU=ON -DBUILD_TESTS=OFF \
+            -DCMAKE_TOOLCHAIN_FILE=../config/arm-none-eabi.cmake
+          make -j$(nproc)
+
+  static-analysis:
+    name: MISRA Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cppcheck
+        run: sudo apt-get install -y cppcheck
+
+      - name: Run cppcheck
+        run: |
+          cppcheck --enable=all --suppress=missingInclude \
+            --xml --xml-version=2 \
+            src/linux/ src/mcu/ 2> cppcheck-report.xml
+
+      - name: Check for errors
+        run: |
+          if grep -q 'severity="error"' cppcheck-report.xml; then
+            echo "❌ Static analysis found errors"
+            grep 'severity="error"' cppcheck-report.xml
+            exit 1
+          fi
+          echo "✅ No static analysis errors"
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cppcheck-report
+          path: cppcheck-report.xml
+
+  traceability:
+    name: Traceability Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate traceability matrix
+        run: python3 tools/scripts/generate_traceability.py
+
+      - name: Check for orphans
+        run: |
+          if grep -q "❌ MISSING" docs/traceability/full_traceability_matrix.md; then
+            echo "⚠️ Traceability gaps found"
+            grep "❌ MISSING" docs/traceability/full_traceability_matrix.md
+          else
+            echo "✅ Full traceability coverage"
+          fi
+
+      - name: Upload matrix
+        uses: actions/upload-artifact@v4
+        with:
+          name: traceability-matrix
+          path: docs/traceability/full_traceability_matrix.md

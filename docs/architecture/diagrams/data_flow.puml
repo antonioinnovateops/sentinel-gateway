@@ -1,0 +1,49 @@
+@startuml data_flow
+!theme plain
+title Sentinel Gateway — End-to-End Data Flow
+
+participant "ADC\nHardware" as adc #F0C085
+participant "sensor_\nacquisition" as sa #85BBF0
+participant "protobuf_\nhandler\n(nanopb)" as pb_mcu #C0C0C0
+participant "tcp_stack\n(MCU)" as tcp_mcu #85F0C0
+participant "tcp_transport\n(Linux)" as tcp_linux #85F0C0
+participant "protobuf-c\n(Linux)" as pb_linux #C0C0C0
+participant "sensor_\nproxy" as sp #85BBF0
+participant "logger" as log #F0E085
+
+== Sensor Data Flow (MCU → Linux) ==
+
+adc -> sa : DMA complete\n(4× uint16_t)
+sa -> sa : calibrate()\n(raw → °C, %RH, hPa, lux)
+sa -> pb_mcu : encode SensorData\n(nanopb, ≤256 bytes)
+pb_mcu -> tcp_mcu : send_frame()\n[4B len][0x01][payload]
+tcp_mcu -> tcp_linux : TCP:5001
+tcp_linux -> pb_linux : decode SensorData\n(protobuf-c)
+pb_linux -> sp : update cache\n(latest per channel)
+sp -> log : write JSON line\n(sensor_data.jsonl)
+
+== Actuator Command Flow (Linux → MCU) ==
+
+participant "actuator_\nproxy" as ap #85BBF0
+participant "actuator_\ncontrol" as ac #FF8888
+participant "PWM\nHardware" as pwm #F0C085
+
+ap -> pb_linux : encode ActuatorCommand
+pb_linux -> tcp_linux : send_frame()\n[4B len][0x10][payload]
+tcp_linux -> tcp_mcu : TCP:5000
+tcp_mcu -> pb_mcu : decode ActuatorCommand
+pb_mcu -> ac : process_command()
+ac -> ac : validate range\n+ clamp limits
+ac -> pwm : set_duty(%)
+pwm -> ac : readback verify
+ac -> pb_mcu : encode ActuatorResponse
+pb_mcu -> tcp_mcu : send_frame()\n[4B len][0x11][payload]
+tcp_mcu -> tcp_linux : TCP:5000
+tcp_linux -> ap : response received
+
+note over ac #FFCCCC
+  **ASIL-B path**
+  5 validation steps
+  before PWM write
+end note
+@enduml

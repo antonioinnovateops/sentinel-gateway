@@ -1,0 +1,20 @@
+[Unit]
+Description=Sentinel Gateway Daemon
+After=network.target usb-gadget.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/sentinel-gw --config /etc/sentinel/gateway.conf
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/log/sentinel
+
+[Install]
+WantedBy=multi-user.target
