@@ -1,0 +1,20 @@
+# nanopb options file for sentinel.proto
+# Controls code generation for MCU (static allocation, bounded sizes)
+# @implements [SYS-072] Static Memory Allocation
+
+# Limit string field sizes (no dynamic allocation)
+sentinel.SensorReading.unit                  max_size:8
+sentinel.ActuatorResponse.error_message      max_size:64
+sentinel.ConfigResponse.error_message        max_size:64
+sentinel.DiagnosticResponse.firmware_version max_size:32
+sentinel.DiagnosticResponse.error_message    max_size:64
+
+# Limit repeated field counts
+sentinel.SensorData.readings                 max_count:4
+sentinel.ConfigUpdate.sensor_configs         max_count:4
+sentinel.ConfigUpdate.actuator_limits        max_count:2
+sentinel.DiagnosticResponse.sensor_configs   max_count:4
+sentinel.DiagnosticResponse.actuator_limits  max_count:2
+sentinel.StateSyncResponse.sensor_configs    max_count:4
+sentinel.StateSyncResponse.actuator_limits   max_count:2
+sentinel.StateSyncResponse.latest_readings   max_count:4

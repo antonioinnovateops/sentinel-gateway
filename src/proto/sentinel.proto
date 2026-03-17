@@ -1,0 +1,253 @@
+// sentinel.proto — Sentinel Gateway Inter-Processor Communication Protocol
+// @implements [SYS-034] Protobuf Message Format
+// @implements [SYS-037] Protocol Version Field
+//
+// Shared between Linux (protobuf-c) and MCU (nanopb)
+// Version: 1.0.0
+
+syntax = "proto3";
+package sentinel;
+
+// ============================================================================
+// Common Types
+// ============================================================================
+
+// Protocol version for compatibility checking
+// @implements [SYS-037]
+message ProtocolVersion {
+  uint32 major = 1;  // Breaking changes
+  uint32 minor = 2;  // Backward-compatible additions
+}
+
+// Message header included in all messages
+// @implements [SYS-036] Message Sequence Numbers
+message MessageHeader {
+  uint32 sequence_number = 1;   // Monotonically increasing, wraps at UINT32_MAX
+  uint64 timestamp_us = 2;      // Microseconds since boot
+  ProtocolVersion version = 3;  // Protocol version
+}
+
+// ============================================================================
+// Sensor Data Messages (MCU → Linux, TCP port 5001)
+// ============================================================================
+
+// Sensor channel identifiers
+// @implements [SYS-001] ADC Channel Count
+enum SensorChannel {
+  SENSOR_TEMPERATURE = 0;  // ADC CH0, @implements [SYS-002]
+  SENSOR_HUMIDITY = 1;     // ADC CH1, @implements [SYS-003]
+  SENSOR_PRESSURE = 2;     // ADC CH2, @implements [SYS-004]
+  SENSOR_LIGHT = 3;        // ADC CH3, @implements [SYS-005]
+}
+
+// Single sensor reading
+// @implements [SYS-007] Sensor Data Packaging
+message SensorReading {
+  SensorChannel channel = 1;   // Which sensor
+  uint32 raw_value = 2;        // Raw ADC value (0-4095), @implements [SYS-006]
+  float calibrated_value = 3;  // Engineering units (°C, %RH, hPa, lux)
+  string unit = 4;             // Unit string ("°C", "%RH", "hPa", "lux")
+}
+
+// Batch of sensor readings (one sample cycle)
+// @implements [SYS-008] Sensor Data Transmission
+message SensorData {
+  MessageHeader header = 1;
+  repeated SensorReading readings = 2;  // Up to 4 readings per sample
+  uint32 sample_rate_hz = 3;            // Current sample rate
+}
+
+// ============================================================================
+// Actuator Messages (Linux → MCU, TCP port 5000)
+// ============================================================================
+
+// Actuator identifiers
+enum ActuatorId {
+  ACTUATOR_FAN = 0;    // PWM TIM2 CH1, @implements [SYS-016]
+  ACTUATOR_VALVE = 1;  // PWM TIM2 CH2, @implements [SYS-017]
+}
+
+// Command to set actuator output
+// @implements [SYS-018] Actuator Command Message
+message ActuatorCommand {
+  MessageHeader header = 1;
+  ActuatorId actuator = 2;       // Which actuator
+  float target_percent = 3;      // Duty cycle 0.0-100.0%
+  uint32 auth_token = 4;         // Authentication for safety-critical changes
+}
+
+// Response status codes
+enum ResponseStatus {
+  STATUS_OK = 0;
+  STATUS_ERROR_INVALID_ACTUATOR = 1;
+  STATUS_ERROR_OUT_OF_RANGE = 2;
+  STATUS_ERROR_RATE_LIMITED = 3;
+  STATUS_ERROR_AUTH_FAILED = 4;
+  STATUS_ERROR_FAILSAFE_ACTIVE = 5;
+  STATUS_ERROR_INTERNAL = 6;
+}
+
+// Actuator command acknowledgment
+// @implements [SYS-019] Actuator Command Acknowledgment
+message ActuatorResponse {
+  MessageHeader header = 1;
+  ActuatorId actuator = 2;           // Which actuator
+  float applied_percent = 3;         // Actually applied duty cycle
+  ResponseStatus status = 4;         // OK or error
+  string error_message = 5;          // Human-readable error (if any)
+}
+
+// ============================================================================
+// Health Monitoring (MCU → Linux, TCP port 5001)
+// ============================================================================
+
+// MCU operational state
+enum McuState {
+  MCU_STATE_INIT = 0;
+  MCU_STATE_NORMAL = 1;
+  MCU_STATE_DEGRADED = 2;
+  MCU_STATE_FAILSAFE = 3;
+  MCU_STATE_ERROR = 4;
+}
+
+// Communication link quality
+// @implements [SYS-041] Communication Status Reporting
+enum CommStatus {
+  COMM_CONNECTED = 0;
+  COMM_DEGRADED = 1;      // Packet loss > 5%
+  COMM_DISCONNECTED = 2;
+}
+
+// Fail-safe cause codes
+enum FailsafeCause {
+  FAILSAFE_NONE = 0;
+  FAILSAFE_COMM_LOSS = 1;      // @implements [SYS-026]
+  FAILSAFE_WATCHDOG = 2;       // @implements [SYS-027]
+  FAILSAFE_PROTO_ERROR = 3;    // @implements [SYS-028]
+  FAILSAFE_INTERNAL_ERROR = 4;
+}
+
+// Health status heartbeat
+// @implements [SYS-038] MCU Heartbeat
+// @implements [SYS-029] Fail-Safe State Reporting
+message HealthStatus {
+  MessageHeader header = 1;
+  McuState state = 2;                      // Current MCU state
+  CommStatus comm_status = 3;              // Communication link quality
+  uint32 uptime_seconds = 4;              // Seconds since last boot
+  uint32 watchdog_reset_count = 5;        // @implements [SYS-071]
+  float cpu_temperature_c = 6;            // MCU die temperature (if available)
+  uint32 free_stack_bytes = 7;            // Remaining stack space
+  FailsafeCause failsafe_cause = 8;       // Why failsafe was triggered (if state == FAILSAFE)
+  
+  // Current actuator states
+  float fan_duty_percent = 9;             // Current fan output
+  float valve_duty_percent = 10;          // Current valve output
+}
+
+// ============================================================================
+// Configuration Messages (Linux → MCU, TCP port 5000)
+// ============================================================================
+
+// Per-channel sensor configuration
+message SensorConfig {
+  SensorChannel channel = 1;
+  uint32 sample_rate_hz = 2;  // 1-100 Hz, @implements [SYS-009]
+  bool enabled = 3;
+}
+
+// Per-actuator safety limits
+// @implements [SYS-023] Fan Safety Limits
+// @implements [SYS-024] Valve Safety Limits
+message ActuatorLimits {
+  ActuatorId actuator = 1;
+  float min_percent = 2;   // Minimum duty cycle (default: 0%)
+  float max_percent = 3;   // Maximum duty cycle (default: 95% fan, 100% valve)
+}
+
+// Configuration update message
+// @implements [SYS-058] Sensor Rate Configuration
+// @implements [SYS-059] Actuator Limit Configuration
+message ConfigUpdate {
+  MessageHeader header = 1;
+  repeated SensorConfig sensor_configs = 2;
+  repeated ActuatorLimits actuator_limits = 3;
+  uint32 auth_token = 4;  // Required for safety limit changes, @implements [SYS-025]
+}
+
+// Configuration response
+message ConfigResponse {
+  MessageHeader header = 1;
+  ResponseStatus status = 2;
+  string error_message = 3;
+}
+
+// ============================================================================
+// Diagnostic Messages (Linux ↔ MCU, TCP port 5000)
+// ============================================================================
+
+// Diagnostic command types
+enum DiagCommand {
+  DIAG_GET_VERSION = 0;      // @implements [SYS-057]
+  DIAG_GET_CONFIG = 1;       // @implements [SYS-061]
+  DIAG_GET_STATUS = 2;       // Full state dump
+  DIAG_RESET_CONFIG = 3;     // @implements [SYS-062] Factory defaults
+  DIAG_GET_COUNTERS = 4;     // Error/reset counters
+}
+
+// Diagnostic request
+message DiagnosticRequest {
+  MessageHeader header = 1;
+  DiagCommand command = 2;
+  uint32 auth_token = 3;     // Required for write operations
+}
+
+// Diagnostic response
+message DiagnosticResponse {
+  MessageHeader header = 1;
+  DiagCommand command = 2;
+  ResponseStatus status = 3;
+  
+  // Response data (populated based on command)
+  string firmware_version = 4;      // For GET_VERSION
+  repeated SensorConfig sensor_configs = 5;  // For GET_CONFIG
+  repeated ActuatorLimits actuator_limits = 6;  // For GET_CONFIG
+  HealthStatus health = 7;          // For GET_STATUS
+  string error_message = 8;
+}
+
+// ============================================================================
+// State Synchronization (after recovery)
+// ============================================================================
+
+// @implements [SYS-044] State Resynchronization
+message StateSyncRequest {
+  MessageHeader header = 1;
+}
+
+message StateSyncResponse {
+  MessageHeader header = 1;
+  HealthStatus health = 2;
+  repeated SensorConfig sensor_configs = 3;
+  repeated ActuatorLimits actuator_limits = 4;
+  repeated SensorReading latest_readings = 5;  // Most recent value per channel
+}
+
+// ============================================================================
+// Message Type Identifiers (for wire framing)
+// ============================================================================
+// Used in the 1-byte message type field of the wire format:
+//   [4-byte LE length][1-byte type][protobuf payload]
+// @implements [SYS-035] Message Framing
+//
+// Type IDs:
+//   0x01 = SensorData
+//   0x02 = HealthStatus
+//   0x10 = ActuatorCommand
+//   0x11 = ActuatorResponse
+//   0x20 = ConfigUpdate
+//   0x21 = ConfigResponse
+//   0x30 = DiagnosticRequest
+//   0x31 = DiagnosticResponse
+//   0x40 = StateSyncRequest
+//   0x41 = StateSyncResponse
