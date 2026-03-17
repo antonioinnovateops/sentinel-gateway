@@ -144,30 +144,7 @@ This document defines the software architecture for both the Linux gateway appli
 
 ### 2.3 MCU Data Flow
 
-```
-ADC Channels (0-3)
-       │
-       ▼ (Timer ISR → DMA)
-┌──────────────────┐
-│ sensor_acquisition│─── calibrate ──►┌──────────────────┐
-└──────────────────┘                  │ protobuf_handler  │
-                                      │ (encode)          │
-                                      └────────┬─────────┘
-                                               │
-                                               ▼
-                                      ┌──────────────────┐
-                                      │   tcp_stack       │──► TCP:5001 → Linux
-                                      │   (send_frame)    │
-                                      └──────────────────┘
-                                               │
-TCP:5000 ← Linux ──────────────────────────────┘
-       │                                   (recv_frame)
-       ▼
-┌──────────────────┐      ┌──────────────────┐
-│ protobuf_handler  │─────►│ actuator_control  │──► PWM Output
-│ (decode)          │      │ (validate+apply)  │
-└──────────────────┘      └──────────────────┘
-```
+![Sensor and Actuator Data Flow](../diagrams/data_flow.drawio.svg)
 
 ### 2.4 MCU Interrupt Priority Table
 

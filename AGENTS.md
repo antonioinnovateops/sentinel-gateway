@@ -24,7 +24,7 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 
 **Quality Gate**: All requirements have IDs, types, safety classifications, acceptance criteria, and traceability links.
 
-**Skill Reference**: `.openclaw/skills/requirements-agent/SKILL.md`
+**Skill Reference**: `.claude/skills/requirements-agent/SKILL.md`
 
 ### Phase 2: Architecture Design (SYS.3 → SWE.2)
 
@@ -41,7 +41,7 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 
 **Quality Gate**: Complete component allocation, all interfaces specified, ADRs for every significant decision.
 
-**Skill Reference**: `.openclaw/skills/architecture-agent/SKILL.md`
+**Skill Reference**: `.claude/skills/architecture-agent/SKILL.md`
 
 ### Phase 3: Detailed Design & Implementation (SWE.3)
 
@@ -61,7 +61,7 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 
 **Quality Gate**: Code compiles for both targets (Linux ARM64, STM32 ARM), zero MISRA Required rule violations, 100% requirement coverage in `@implements` tags.
 
-**Skill Reference**: `.openclaw/skills/implementation-agent/SKILL.md`
+**Skill Reference**: `.claude/skills/implementation-agent/SKILL.md`
 
 ### Phase 4: Unit Verification (SWE.4)
 
@@ -76,7 +76,7 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 
 **Quality Gate**: All tests pass, coverage targets met, traceability complete.
 
-**Skill Reference**: `.openclaw/skills/verification-agent/SKILL.md`
+**Skill Reference**: `.claude/skills/verification-agent/SKILL.md`
 
 ### Phase 5: Integration Testing (SWE.5)
 
@@ -89,7 +89,7 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 
 **Quality Gate**: All integration tests pass in QEMU SIL environment.
 
-**Skill Reference**: `.openclaw/skills/verification-agent/SKILL.md`
+**Skill Reference**: `.claude/skills/verification-agent/SKILL.md`
 
 ### Phase 6: System Qualification (SWE.6)
 
@@ -113,7 +113,7 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 
 ## Agent Skills
 
-Each agent role has a dedicated skill file in `.openclaw/skills/`:
+Each agent role has a dedicated skill file in `.claude/skills/`:
 
 | Skill | Agent Role | ASPICE Process |
 |-------|------------|----------------|

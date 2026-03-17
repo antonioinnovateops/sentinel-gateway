@@ -26,38 +26,22 @@ Prove that with a sufficiently detailed specification and the right agent skill-
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    QEMU Host (Vast.ai GPU Server)               │
-│                                                                 │
-│  ┌──────────────────────────┐   ┌────────────────────────────┐  │
-│  │   QEMU ARM64 (Linux)    │   │   QEMU ARM (STM32U575)     │  │
-│  │                          │   │                            │  │
-│  │  ┌────────────────────┐  │   │  ┌──────────────────────┐  │  │
-│  │  │  Gateway Core App  │  │   │  │  Sensor Acquisition  │  │  │
-│  │  │  - Protobuf Handler│  │   │  │  - ADC Driver        │  │  │
-│  │  │  - Sensor Proxy    │  │   │  │  - Protobuf Handler  │  │  │
-│  │  │  - Actuator Proxy  │  │   │  │  - Actuator Control  │  │  │
-│  │  │  - Health Monitor  │  │   │  │  - Watchdog          │  │  │
-│  │  │  - Diagnostics     │  │   │  │  - USB CDC           │  │  │
-│  │  └────────┬───────────┘  │   │  └──────────┬───────────┘  │  │
-│  │           │               │   │             │              │  │
-│  │  ┌────────┴───────────┐  │   │  ┌──────────┴───────────┐  │  │
-│  │  │  USB Ethernet      │  │   │  │  USB CDC-ECM         │  │  │
-│  │  │  (CDC-ECM)         │  │   │  │  (Device Mode)       │  │  │
-│  │  └────────┬───────────┘  │   │  └──────────┬───────────┘  │  │
-│  └───────────┼──────────────┘   └─────────────┼──────────────┘  │
-│              │         TCP/IP + Protobuf       │                 │
-│              └────────────────────────────────-┘                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+![System Architecture Overview](docs/architecture/diagrams/system_overview.drawio.svg)
+
+### Data Flow
+
+![Sensor and Actuator Data Flow](docs/architecture/diagrams/data_flow.drawio.svg)
+
+### State Machine
+
+![System Operational State Machine](docs/architecture/diagrams/state_machine.drawio.svg)
 
 ## Repository Structure
 
 ```
 sentinel-gateway/
 ├── .github/workflows/          # CI/CD pipelines
-├── .openclaw/skills/           # AI agent skill definitions
+├── .claude/skills/           # AI agent skill definitions
 ├── docs/
 │   ├── requirements/           # SYS.2, SWE.1 work products
 │   ├── architecture/           # SYS.3, SWE.2 work products
@@ -120,7 +104,7 @@ This project is designed to be built from scratch by AI agents. To benchmark:
 
 1. Clone this repo (specification only, no implementation)
 2. Point your AI agent at `AGENTS.md`
-3. The agent reads skills from `.openclaw/skills/`
+3. The agent reads skills from `.claude/skills/`
 4. Measure: time to completion, test pass rate, MISRA compliance, code quality
 
 ## License
