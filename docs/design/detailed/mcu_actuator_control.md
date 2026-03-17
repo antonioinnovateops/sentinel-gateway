@@ -19,17 +19,7 @@ The actuator_control module is the most safety-critical component. It processes 
 
 ## 2. Safety Architecture
 
-```
-Command In ──► [1] Decode ──► [2] Auth Check ──► [3] Rate Limit
-                                                        │
-                                                        ▼
-              [6] Readback ◄── [5] PWM Write ◄── [4] Range+Limit
-                   │                                    Validate
-                   ▼
-              [7] Response ──► Response Out
-
-Any step failure ──► enter_safe_state()
-```
+![Actuator Command Safety Flow](../../architecture/diagrams/actuator_safety_flow.drawio.svg)
 
 ### Validation Layers (Defense in Depth)
 
@@ -42,22 +32,9 @@ Any step failure ──► enter_safe_state()
 
 ## 3. State Machine
 
-```
-         ┌──────────┐
-         │  INIT    │ (PWM = 0%, no commands accepted)
-         └────┬─────┘
-              │ Init complete
-         ┌────▼─────┐
-    ┌────│  ACTIVE  │◄──── Recovery from FAILSAFE
-    │    └────┬─────┘      (only via full state sync)
-    │         │
-    │    Any safety       
-    │    violation         
-    │         │
-    │    ┌────▼─────┐
-    └───►│ FAILSAFE │ (PWM = 0%, reject all commands)
-         └──────────┘
-```
+*See the System Operational State Machine diagram for full state transitions:*
+
+![State Machine](../../architecture/diagrams/state_machine.drawio.svg)
 
 ## 4. Data Structures
 

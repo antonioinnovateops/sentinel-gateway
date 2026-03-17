@@ -30,37 +30,43 @@ aspice_process: "MAN.3 Project Management"
 **Outputs**: Software Architecture Document (SWAD), ADRs, interface specs, diagrams
 **Quality Gate**: All requirements allocated, all interfaces specified
 
-### Phase 3: Detailed Design & Implementation
-**Duration**: ~8 hours
-**Inputs**: SWAD, SWRS, interface specs
-**Outputs**: C source code (Linux + MCU), CMakeLists.txt, Doxygen headers
-**Quality Gate**: Compiles for both targets, MISRA clean
+### Phase 3: Container Build Environment Setup
+**Duration**: ~2 hours
+**Inputs**: Build System Spec (BSS-001), SIL Environment Spec (SIL-001), Build Environment Spec (BUILD-001)
+**Outputs**: Dockerfiles (5 images), docker-compose.yml, CMake toolchain files, QEMU launch scripts
+**Quality Gate**: `docker compose build` succeeds, all containers healthy, QEMU boots both VMs
 
-### Phase 4: Unit Verification
+### Phase 4: Implementation
+**Duration**: ~8 hours
+**Inputs**: SWAD, SWRS, interface specs, container build environment
+**Outputs**: C source code (Linux + MCU), CMakeLists.txt, linker scripts, Doxygen headers
+**Quality Gate**: Compiles in containers for both targets, MISRA clean
+
+### Phase 5: Unit Verification
 **Duration**: ~4 hours
 **Inputs**: Source code, SWRS
 **Outputs**: Unit tests, mock implementations, coverage reports
-**Quality Gate**: ≥95% statement coverage, all tests pass
+**Quality Gate**: ≥95% statement coverage, all tests pass in container
 
-### Phase 5: Integration Testing
+### Phase 6: Integration Testing (SIL)
 **Duration**: ~3 hours
-**Inputs**: All source code, QEMU environment
-**Outputs**: Integration test suite, SIL test scripts
-**Quality Gate**: All integration scenarios pass in QEMU
+**Inputs**: All source code, containerized QEMU SIL environment
+**Outputs**: Integration test suite, SIL test scripts, fault injection tests
+**Quality Gate**: All 12 integration scenarios pass in QEMU SIL container
 
-### Phase 6: System Qualification
+### Phase 7: System Qualification
 **Duration**: ~2 hours
 **Inputs**: SRS, complete system in SIL
 **Outputs**: Qualification test suite, final test report
-**Quality Gate**: All system requirements verified
+**Quality Gate**: All system requirements verified in SIL
 
-### Phase 7: Review & Compliance
+### Phase 8: Review & Compliance
 **Duration**: ~2 hours
 **Inputs**: All artifacts
 **Outputs**: MISRA report, traceability matrix, compliance summary
 **Quality Gate**: Zero critical findings
 
-**Total Estimated AI Agent Time**: ~24 hours
+**Total Estimated AI Agent Time**: ~26 hours
 
 ## 3. Work Product Checklist
 
@@ -88,6 +94,11 @@ aspice_process: "MAN.3 Project Management"
 | WP-20 | Risk Register | MAN.5 | ✅ Complete |
 | WP-21 | Safety Analysis (FMEA) | Safety | 🔲 Pending |
 | WP-22 | Protobuf Schema | SWE.2 | ✅ Complete |
+| WP-23 | Build Environment Spec | SWE.3 | ✅ Complete |
+| WP-24 | SIL Environment Spec | SWE.6 | ✅ Complete |
+| WP-25 | Build System Spec | SWE.3 | ✅ Complete |
+| WP-26 | Container Dockerfiles | SWE.3 | 🔲 Phase 3 |
+| WP-27 | QEMU Launch Scripts | SWE.6 | 🔲 Phase 3 |
 
 ## 4. Benchmarking Protocol
 

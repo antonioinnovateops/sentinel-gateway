@@ -120,13 +120,7 @@ Output: Lists all commands with usage, followed by END
 
 ## 5. Client State Machine
 
-```
-CONNECTED → READING_LINE → PARSING → EXECUTING → WRITING_RESPONSE → READING_LINE
-                                                                         │
-                                                           (client disconnect)
-                                                                         ▼
-                                                                    DISCONNECTED
-```
+![Diagnostics Client State Machine](../../architecture/diagrams/diag_client_state.drawio.svg)
 
 ## 6. Buffer Management
 

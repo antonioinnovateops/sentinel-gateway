@@ -23,7 +23,7 @@ This plan defines MISRA C:2012 compliance scope, tooling, and deviation handling
 | `src/mcu/app/` | ✅ | Project application code |
 | `src/mcu/hal/` | ✅ | Project HAL code |
 | `src/mcu/common/` | ✅ | Project shared code |
-| `src/proto/` (generated) | ❌ | Auto-generated protobuf code |
+| `docs/design/interface_specs/proto/` (generated) | ❌ | Auto-generated protobuf code |
 | lwIP library | ❌ | Third-party, not modifiable |
 | nanopb library | ❌ | Third-party, not modifiable |
 | protobuf-c library | ❌ | Third-party, not modifiable |

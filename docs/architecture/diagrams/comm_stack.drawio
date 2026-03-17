@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-03-17" type="device">
+  <diagram id="comm-stack" name="Communication Protocol Stack">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1"
+      tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1"
+      pageWidth="800" pageHeight="500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Communication Protocol Stack (SE-03)" style="text;html=1;fontSize=18;fontStyle=1;align=center;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="150" y="10" width="500" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="app" value="Application Layer&#10;Protobuf messages (sentinel.proto)&#10;Length-prefixed framing: [4B len][1B type][payload]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="60" width="600" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="transport" value="Transport Layer&#10;TCP (Port 5000: commands | Port 5001: telemetry | Port 5002: diagnostics)&#10;Reliable, ordered byte stream" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="140" width="600" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network" value="Network Layer&#10;IPv4 (192.168.7.0/24 subnet)&#10;Static IP: Linux = .1, MCU = .2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="220" width="600" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="datalink" value="Data Link Layer&#10;CDC-ECM (Ethernet over USB)&#10;Ethernet frames" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="300" width="600" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="physical" value="Physical Layer&#10;USB 2.0 Full Speed (12 Mbps)&#10;Virtual USB bridge in QEMU" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="380" width="600" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Side labels -->
+        <mxCell id="lbl_linux" value="Linux&#10;(protobuf-c)" style="text;html=1;fontSize=9;fontStyle=2;align=center;fillColor=none;strokeColor=none;fontColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="20" y="70" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl_mcu" value="MCU&#10;(nanopb)" style="text;html=1;fontSize=9;fontStyle=2;align=center;fillColor=none;strokeColor=none;fontColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="710" y="70" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl_lwip" value="lwIP" style="text;html=1;fontSize=9;fontStyle=2;align=center;fillColor=none;strokeColor=none;fontColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="710" y="150" width="70" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

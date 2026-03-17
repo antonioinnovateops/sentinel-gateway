@@ -38,27 +38,33 @@ Prove that with a sufficiently detailed specification and the right agent skill-
 
 ## Repository Structure
 
+> **Note**: This is a **specification-only repository**. No implementation code exists yet — only Markdown specs, diagrams, protobuf schemas, and empty directory placeholders. Implementation is triggered in Phase 3+ (see Project Plan).
+
 ```
 sentinel-gateway/
-├── .github/workflows/          # CI/CD pipelines
-├── .claude/skills/           # AI agent skill definitions
+├── .github/workflows/          # CI/CD pipeline specs
+├── .claude/skills/             # AI agent skill definitions
 ├── docs/
 │   ├── requirements/           # SYS.2, SWE.1 work products
-│   ├── architecture/           # SYS.3, SWE.2 work products
-│   ├── design/                 # SWE.3 detailed design
+│   ├── architecture/           # SYS.3, SWE.2 work products + diagrams
+│   ├── design/                 # SWE.3 detailed design + build/SIL specs
+│   │   ├── detailed/           # Component-level design docs
+│   │   ├── interface_specs/    # Wire format, shared types, protobuf schema
+│   │   ├── build_environment.md    # Container build pipeline spec (BUILD-001)
+│   │   ├── build_system_spec.md    # CMake/toolchain spec (BSS-001)
+│   │   └── sil_environment.md      # QEMU SIL test environment spec (SIL-001)
 │   ├── test/                   # SWE.4, SWE.5, SWE.6 test specs
 │   ├── reviews/                # SUP.1 review records
 │   ├── project/                # MAN.3 project management
-│   ├── safety/                 # Safety analysis (FMEA, FTA)
+│   ├── safety/                 # Safety analysis (FMEA)
 │   └── traceability/           # Cross-cutting traceability matrices
 ├── src/
-│   ├── linux/                  # Linux gateway application
-│   ├── mcu/                    # STM32U575 firmware
-│   └── proto/                  # Shared protobuf definitions
-├── tests/                      # All test code
-├── tools/                      # Build scripts, QEMU configs, quality checks
-├── config/                     # Toolchain and analysis configs
-├── CMakeLists.txt              # Top-level build
+│   ├── linux/                  # Linux gateway (empty — Phase 4)
+│   └── mcu/                    # STM32U575 firmware (empty — Phase 4)
+├── tests/                      # All test code (empty — Phase 5+)
+├── tools/                      # Build scripts, QEMU configs
+├── config/                     # Toolchain configs (empty — Phase 3)
+├── docker/                     # Dockerfiles (empty — Phase 3)
 ├── CHANGELOG.md                # Release history
 └── AGENTS.md                   # Agent orchestration instructions
 ```
@@ -79,24 +85,33 @@ sentinel-gateway/
 | SUP.8 | All Agents | Configuration management (Git) |
 | MAN.3 | Orchestrator | Project plan, risk register |
 
-## How to Build (SIL)
+## How to Build (Containerized)
+
+Everything runs in Docker containers — no host toolchain installation required.
 
 ```bash
-# Prerequisites: QEMU, ARM toolchain, protobuf compiler, CMake
-./tools/scripts/setup_sil.sh
+# Prerequisites: Docker 24+ and Docker Compose v2
 
-# Build Linux gateway
-./tools/scripts/build_linux.sh
+# Build both targets (Linux gateway + MCU firmware)
+docker compose up build-linux build-mcu
 
-# Build MCU firmware
-./tools/scripts/build_mcu.sh
+# Run MISRA + static analysis
+docker compose up analysis
 
-# Run Software-in-the-Loop
-./tools/scripts/run_sil.sh
+# Run SIL integration tests (QEMU dual-VM)
+docker compose up sil
 
-# Run all tests
-./tools/scripts/run_tests.sh
+# Build Yocto image (first time ~2 hours)
+docker compose --profile full up yocto
+
+# Full pipeline (build → analysis → SIL)
+docker compose up
+
+# Interactive SIL debugging shell
+docker compose run sil bash
 ```
+
+See [Build Environment Spec](docs/design/build_environment.md) and [SIL Environment Spec](docs/design/sil_environment.md) for full details.
 
 ## Benchmarking AI Models
 

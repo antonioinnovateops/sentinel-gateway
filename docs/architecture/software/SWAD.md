@@ -33,56 +33,7 @@ This document defines the software architecture for both the Linux gateway appli
 
 ### 2.1 Component Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     MCU Firmware (Bare-Metal)                       │
-│                                                                     │
-│  ┌──────────────────────── Application Layer ─────────────────────┐ │
-│  │                                                                │ │
-│  │  ┌─────────────────┐  ┌─────────────────┐  ┌───────────────┐  │ │
-│  │  │ sensor_          │  │ actuator_        │  │ health_       │  │ │
-│  │  │ acquisition      │  │ control          │  │ reporter      │  │ │
-│  │  │                  │  │                  │  │               │  │ │
-│  │  │ - sample_all()   │  │ - process_cmd()  │  │ - send_hb()   │  │ │
-│  │  │ - calibrate()    │  │ - validate()     │  │ - check_gw()  │  │ │
-│  │  │ - package_msg()  │  │ - apply_pwm()    │  │ - report()    │  │ │
-│  │  │ - get_reading()  │  │ - enter_safe()   │  │ - get_state() │  │ │
-│  │  └────────┬─────────┘  └──────┬──────────┘  └──────┬────────┘  │ │
-│  │           │                   │                     │           │ │
-│  │  ┌────────┴───────────────────┴─────────────────────┴────────┐  │ │
-│  │  │              protobuf_handler (nanopb)                    │  │ │
-│  │  │  - encode_sensor_data()  - decode_actuator_cmd()          │  │ │
-│  │  │  - encode_health()       - decode_config_update()         │  │ │
-│  │  │  - encode_response()     - decode_diag_request()          │  │ │
-│  │  └────────────────────────────┬──────────────────────────────┘  │ │
-│  │                               │                                 │ │
-│  │  ┌─────────────────┐  ┌──────┴──────────┐  ┌───────────────┐  │ │
-│  │  │ config_store     │  │ tcp_stack       │  │ watchdog_mgr  │  │ │
-│  │  │                  │  │ (lwIP NO_SYS)   │  │               │  │ │
-│  │  │ - load()         │  │ - init()        │  │ - init()      │  │ │
-│  │  │ - save()         │  │ - send_frame()  │  │ - feed()      │  │ │
-│  │  │ - validate()     │  │ - recv_frame()  │  │ - get_count() │  │ │
-│  │  │ - get_defaults() │  │ - reconnect()   │  │               │  │ │
-│  │  └────────┬─────────┘  └──────┬──────────┘  └──────┬────────┘  │ │
-│  └───────────┼───────────────────┼─────────────────────┼──────────┘ │
-│              │                   │                     │            │
-│  ┌───────────┴───────────────────┴─────────────────────┴──────────┐ │
-│  │                    HAL (Hardware Abstraction Layer)             │ │
-│  │                                                                │ │
-│  │  ┌───────────┐ ┌──────────┐ ┌──────────┐ ┌──────┐ ┌────────┐  │ │
-│  │  │ adc_driver │ │pwm_driver│ │gpio_driver│ │flash │ │usb_cdc │  │ │
-│  │  │           │ │          │ │          │ │driver│ │        │  │ │
-│  │  │ init()    │ │ init()   │ │ init()   │ │read()│ │ init() │  │ │
-│  │  │ read()    │ │ set()    │ │ set()    │ │write()││ poll() │  │ │
-│  │  │ start()   │ │ get()    │ │ get()    │ │erase()││ send() │  │ │
-│  │  └───────────┘ └──────────┘ └──────────┘ └──────┘ └────────┘  │ │
-│  └────────────────────────────────────────────────────────────────┘ │
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  main_loop: super-loop scheduler, init sequence, WDG feed   │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-```
+![System Architecture Overview](../diagrams/system_overview.drawio.svg)
 
 ### 2.2 MCU Component Descriptions
 
@@ -163,47 +114,7 @@ This document defines the software architecture for both the Linux gateway appli
 
 ### 3.1 Component Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Linux Gateway (sentinel-gw)                      │
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                    gateway_core (main)                        │   │
-│  │    - epoll event loop                                        │   │
-│  │    - startup sequence                                        │   │
-│  │    - signal handling (SIGTERM, SIGINT)                        │   │
-│  │    - state sync on reconnect                                 │   │
-│  └──────┬─────────┬──────────┬──────────┬──────────┬───────────┘   │
-│         │         │          │          │          │                │
-│  ┌──────┴──┐ ┌────┴────┐ ┌──┴───────┐ ┌┴────────┐ ┌┴───────────┐  │
-│  │sensor_  │ │actuator_│ │health_   │ │diagnos- │ │config_     │  │
-│  │proxy    │ │proxy    │ │monitor   │ │tics     │ │manager     │  │
-│  │         │ │         │ │          │ │         │ │            │  │
-│  │recv()   │ │send()   │ │check()   │ │serve()  │ │update()   │  │
-│  │validate│ │wait_ack()│ │recover() │ │handle() │ │query()    │  │
-│  │forward()│ │         │ │          │ │         │ │            │  │
-│  └────┬────┘ └────┬────┘ └────┬─────┘ └───┬────┘ └─────┬──────┘  │
-│       │           │           │            │            │          │
-│  ┌────┴───────────┴───────────┴────────────┴────────────┴───────┐  │
-│  │                    tcp_transport                               │  │
-│  │  - connect/accept TCP sockets                                 │  │
-│  │  - wire frame encode/decode                                   │  │
-│  │  - message dispatch by type                                   │  │
-│  └──────────────────────┬────────────────────────────────────────┘  │
-│                         │                                           │
-│  ┌──────────────────────┴────────────────────────────────────────┐  │
-│  │              protobuf-c (encode/decode)                        │  │
-│  └───────────────────────────────────────────────────────────────┘  │
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                       logger                                  │   │
-│  │  - JSON Lines output (sensor_data.jsonl, events.jsonl)        │   │
-│  │  - severity filtering                                         │   │
-│  │  - log rotation (100 MB, 10 files)                            │   │
-│  │  - async writer thread with message queue                     │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-```
+*The Linux gateway components are shown in the System Architecture Overview diagram above. See the left side (QEMU ARM64 Linux Gateway) for all components and their relationships.*
 
 ### 3.2 Linux Component Descriptions
 
@@ -488,30 +399,8 @@ int32_t diag_process_events(void);
 ## 7. Memory Architecture
 
 ### 7.1 MCU Memory Map
-```
-Flash (2 MB):
-  0x0800_0000 - 0x0802_FFFF  Firmware code + const (.text, .rodata)     192 KB
-  0x0803_0000 - 0x0803_0FFF  Configuration sector (4 KB, CRC-protected)
-  0x0803_1000 - 0x081F_FFFF  Reserved / future OTA
 
-RAM (786 KB):
-  0x2000_0000 - 0x2000_7FFF  Stack (32 KB)
-  0x2000_8000 - 0x2001_FFFF  BSS + Data (static variables, 96 KB)
-  0x2002_0000 - 0x2003_FFFF  lwIP buffers (128 KB, static pool)
-  0x2004_0000 - 0x200C_3FFF  Application buffers (530 KB available)
-```
-
-### 7.2 MCU Static Buffer Allocation
-| Buffer | Size | Purpose |
-|--------|------|---------|
-| adc_dma_buffer | 8 bytes | 4 × uint16_t DMA target |
-| tx_frame_buffer | 512 bytes | Outgoing wire frame |
-| rx_frame_buffer | 512 bytes | Incoming wire frame |
-| protobuf_encode_buf | 256 bytes | nanopb encode workspace |
-| protobuf_decode_buf | 256 bytes | nanopb decode workspace |
-| lwip_memp_pool | 128 KB | lwIP memory pool |
-| config_cache | 128 bytes | Current config in RAM |
-| sensor_readings | 64 bytes | Latest 4 × sensor_reading_t |
+![MCU Memory Map](../diagrams/mcu_memory_map.drawio.svg)
 
 ---
 

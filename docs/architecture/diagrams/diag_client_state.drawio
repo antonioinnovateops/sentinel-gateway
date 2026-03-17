@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-03-17" type="device">
+  <diagram id="diag-state" name="Diagnostics Client State Machine">
+    <mxGraphModel dx="900" dy="350" grid="1" gridSize="10" guides="1"
+      tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1"
+      pageWidth="900" pageHeight="300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Diagnostics Client State Machine" style="text;html=1;fontSize=16;fontStyle=1;align=center;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="200" y="10" width="500" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="connected" value="CONNECTED" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="70" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="reading" value="READING&#10;LINE" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="190" y="70" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="parsing" value="PARSING" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="350" y="70" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="executing" value="EXECUTING" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="510" y="70" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="writing" value="WRITING&#10;RESPONSE" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="670" y="70" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="disconnected" value="DISCONNECTED" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="510" y="210" width="130" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Transitions -->
+        <mxCell id="t1" style="strokeColor=#82b366;strokeWidth=2;flowAnimation=1;" edge="1" source="connected" target="reading" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="t2" style="strokeColor=#6c8ebf;strokeWidth=2;flowAnimation=1;" edge="1" source="reading" target="parsing" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="t2l" value="newline" style="edgeLabel;html=1;fontSize=8;fontColor=#6c8ebf;" vertex="1" connectable="0" parent="t2"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="t3" style="strokeColor=#d6b656;strokeWidth=2;flowAnimation=1;" edge="1" source="parsing" target="executing" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="t3l" value="valid cmd" style="edgeLabel;html=1;fontSize=8;fontColor=#d6b656;" vertex="1" connectable="0" parent="t3"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="t4" style="strokeColor=#d79b00;strokeWidth=2;flowAnimation=1;" edge="1" source="executing" target="writing" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="t4l" value="result" style="edgeLabel;html=1;fontSize=8;fontColor=#d79b00;" vertex="1" connectable="0" parent="t4"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Loop back -->
+        <mxCell id="t5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=2;flowAnimation=1;exitX=0.5;exitY=0;entryX=0.5;entryY=0;" edge="1" source="writing" target="reading" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="725" y="50" /><mxPoint x="245" y="50" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t5l" value="next command" style="edgeLabel;html=1;fontSize=8;fontColor=#82b366;" vertex="1" connectable="0" parent="t5"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Disconnect from any state -->
+        <mxCell id="td1" style="strokeColor=#b85450;strokeWidth=1;dashed=1;" edge="1" source="reading" target="disconnected" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="td2" style="strokeColor=#b85450;strokeWidth=1;dashed=1;" edge="1" source="writing" target="disconnected" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="td_l" value="client disconnect" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#b85450;align=center;" vertex="1" parent="1">
+          <mxGeometry x="380" y="190" width="100" height="15" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

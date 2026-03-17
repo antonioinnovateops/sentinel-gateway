@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-03-17" type="device">
+  <diagram id="decomp" name="System Element Decomposition">
+    <mxGraphModel dx="1522" dy="900" grid="1" gridSize="10" guides="1"
+      tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1"
+      pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="System Element Decomposition" style="text;html=1;fontSize=20;fontStyle=1;align=center;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="500" y="10" width="600" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Root -->
+        <mxCell id="root" value="Sentinel Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="620" y="60" width="260" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- SE-01 Linux -->
+        <mxCell id="se01" value="SE-01: Linux Gateway Subsystem&#10;(QEMU ARM64)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;shadow=1;verticalAlign=top;spacingTop=3;" vertex="1" parent="1">
+          <mxGeometry x="40" y="140" width="360" height="320" as="geometry" />
+        </mxCell>
+
+        <mxCell id="se011" value="SE-01.1 Operating System&#10;Yocto Linux (Poky)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="60" y="190" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="se012" value="SE-01.2 Gateway Core Application" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;verticalAlign=top;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="60" y="245" width="320" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="se0121" value="Protobuf Handler" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="275" width="95" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0122" value="Sensor Proxy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="175" y="275" width="85" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0123" value="Actuator Proxy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="270" y="275" width="95" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0124" value="Health Monitor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="315" width="95" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0125" value="Diagnostics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="175" y="315" width="85" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0126" value="Config Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="270" y="315" width="95" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0127" value="Logger" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6d0de;strokeColor=#996185;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="355" width="95" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="se013" value="SE-01.3 BSP Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;verticalAlign=top;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="60" y="400" width="320" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="se0131" value="USB Ethernet (CDC-ECM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="420" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="se0132" value="Network Stack (TCP/IP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="220" y="420" width="140" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- SE-02 MCU -->
+        <mxCell id="se02" value="SE-02: MCU Subsystem&#10;(QEMU ARM, STM32U575)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;shadow=1;verticalAlign=top;spacingTop=3;" vertex="1" parent="1">
+          <mxGeometry x="440" y="140" width="380" height="320" as="geometry" />
+        </mxCell>
+
+        <mxCell id="se021" value="SE-02.1 Application Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;verticalAlign=top;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="460" y="190" width="340" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="se0211" value="Sensor Acq" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="470" y="220" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0212" value="Actuator Ctrl&#10;ASIL-B" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="560" y="220" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0213" value="Protobuf&#10;(nanopb)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="650" y="220" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0214" value="Watchdog" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="730" y="220" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0215" value="Config Store" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="470" y="260" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0216" value="Health Reporter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="560" y="260" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="se0217" value="TCP (lwIP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="660" y="260" width="70" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="se022" value="SE-02.2 HAL Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;verticalAlign=top;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="460" y="345" width="340" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="se0221" value="ADC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#deebf7;strokeColor=#6c8ebf;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="470" y="375" width="50" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se0222" value="PWM/Timer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#deebf7;strokeColor=#6c8ebf;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="530" y="375" width="65" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se0223" value="GPIO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#deebf7;strokeColor=#6c8ebf;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="605" y="375" width="45" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se0224" value="USB CDC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#deebf7;strokeColor=#6c8ebf;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="660" y="375" width="60" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se0225" value="Flash" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#deebf7;strokeColor=#6c8ebf;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="730" y="375" width="50" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se0226" value="IWDG" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#deebf7;strokeColor=#6c8ebf;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="470" y="410" width="50" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- SE-03 Comm -->
+        <mxCell id="se03" value="SE-03: Communication Link" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;shadow=1;verticalAlign=top;spacingTop=3;" vertex="1" parent="1">
+          <mxGeometry x="860" y="140" width="330" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="se031" value="SE-03.1 USB 2.0 Physical (emulated)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#deebf7;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="880" y="195" width="290" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se032" value="SE-03.2 CDC-ECM Protocol" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="880" y="225" width="290" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se033" value="SE-03.3 TCP/IP Transport" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="880" y="255" width="290" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se034" value="SE-03.4 Protobuf Application" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="880" y="285" width="290" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- SE-04 QEMU -->
+        <mxCell id="se04" value="SE-04: QEMU SIL Environment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontStyle=1;shadow=1;verticalAlign=top;spacingTop=3;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="860" y="340" width="330" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="se041" value="ARM64 virt Machine (Linux)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="880" y="380" width="140" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se042" value="ARM Cortex-M Machine (MCU)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="380" width="140" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se043" value="Virtual USB Bridge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="880" y="415" width="140" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="se044" value="Emulated Peripherals" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="415" width="140" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Edges from root -->
+        <mxCell id="e1" style="rounded=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="root" target="se01" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="rounded=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="root" target="se02" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="rounded=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="root" target="se03" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="rounded=1;strokeColor=#666666;strokeWidth=2;dashed=1;" edge="1" source="root" target="se04" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

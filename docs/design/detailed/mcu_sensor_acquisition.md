@@ -18,22 +18,7 @@ Convert raw ADC readings to calibrated engineering units and package them as pro
 
 ## 2. Data Flow
 
-```
-Timer ISR (per-channel rate)
-    │
-    ▼
-adc_driver_start_scan()
-    │
-    ▼ (DMA complete)
-adc_driver_scan_complete() → true
-    │
-    ▼
-sensor_acq_process()
-    ├── read raw values: adc_driver_get_raw()
-    ├── calibrate each channel: calibration_table[ch](raw)
-    ├── update latest_readings[] cache
-    └── encode: sensor_acq_encode_message()
-```
+![Sensor Acquisition Data Flow](../../architecture/diagrams/sensor_data_flow.drawio.svg)
 
 ## 3. Calibration Functions
 

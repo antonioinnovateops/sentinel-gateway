@@ -64,7 +64,7 @@ The system demonstrates a modern embedded architecture pattern: **Linux SoC + MC
 - TCP port 5000 for command/response, TCP port 5001 for streaming telemetry
 
 **Application Protocol**: Protocol Buffers v3
-- Defined in `src/proto/sentinel.proto`
+- Defined in `docs/design/interface_specs/proto/sentinel.proto`
 - Message types: SensorData, ActuatorCommand, HealthStatus, DiagnosticRequest/Response
 - Versioned schema with backward compatibility
 

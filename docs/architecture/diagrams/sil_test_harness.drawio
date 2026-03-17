@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-03-17" type="device">
+  <diagram id="sil-harness" name="SIL Test Harness Architecture">
+    <mxGraphModel dx="900" dy="600" grid="1" gridSize="10" guides="1"
+      tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1"
+      pageWidth="900" pageHeight="550" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="SIL Test Harness Architecture" style="text;html=1;fontSize=16;fontStyle=1;align=center;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="200" y="10" width="500" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Container -->
+        <mxCell id="container" value="Docker Container (sentinel-sil)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;verticalAlign=top;spacingTop=5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="45" width="840" height="480" as="geometry" />
+        </mxCell>
+
+        <!-- Linux VM -->
+        <mxCell id="linux_vm" value="QEMU Linux VM (aarch64)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;verticalAlign=top;spacingTop=3;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="80" width="250" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="linux_gw" value="sentinel-gw&#10;process" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="115" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="linux_yocto" value="Yocto Linux&#10;(Poky)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#deebf7;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="180" y="115" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="linux_ip" value="192.168.7.1" style="text;html=1;fontSize=9;fontStyle=1;fontColor=#6c8ebf;align=center;" vertex="1" parent="1">
+          <mxGeometry x="60" y="170" width="90" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="linux_serial" value="Serial: ttyAMA0" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#666;align=center;" vertex="1" parent="1">
+          <mxGeometry x="60" y="190" width="100" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="linux_qmp" value="QMP: :4444" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#666;align=center;" vertex="1" parent="1">
+          <mxGeometry x="180" y="190" width="80" height="15" as="geometry" />
+        </mxCell>
+
+        <!-- MCU VM -->
+        <mxCell id="mcu_vm" value="QEMU MCU VM (ARM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;verticalAlign=top;spacingTop=3;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="260" width="250" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="mcu_fw" value="sentinel-mcu&#10;firmware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="295" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="mcu_baremetal" value="Bare-metal&#10;(lwIP + nanopb)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#deebf7;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="180" y="295" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="mcu_ip" value="192.168.7.2" style="text;html=1;fontSize=9;fontStyle=1;fontColor=#6c8ebf;align=center;" vertex="1" parent="1">
+          <mxGeometry x="60" y="350" width="90" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="mcu_serial" value="Serial: console" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#666;align=center;" vertex="1" parent="1">
+          <mxGeometry x="60" y="370" width="100" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="mcu_qmp" value="QMP: :4445" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#666;align=center;" vertex="1" parent="1">
+          <mxGeometry x="180" y="370" width="80" height="15" as="geometry" />
+        </mxCell>
+
+        <!-- Bridge -->
+        <mxCell id="bridge" value="br-sentinel&#10;(Linux bridge)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="130" y="430" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="tap_gw" style="strokeColor=#6c8ebf;strokeWidth=2;flowAnimation=1;" edge="1" source="linux_vm" target="bridge" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="tap_gw_l" value="tap-gw" style="edgeLabel;html=1;fontSize=8;fontColor=#6c8ebf;" vertex="1" connectable="0" parent="tap_gw"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="tap_mcu" style="strokeColor=#6c8ebf;strokeWidth=2;flowAnimation=1;" edge="1" source="mcu_vm" target="bridge" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="tap_mcu_l" value="tap-mcu" style="edgeLabel;html=1;fontSize=8;fontColor=#6c8ebf;" vertex="1" connectable="0" parent="tap_mcu"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Test Observer -->
+        <mxCell id="observer" value="Test Observer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;verticalAlign=top;spacingTop=3;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="80" width="230" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="tcp_probe" value="TCP Probe&#10;(5000, 5001, 5002)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="385" y="110" width="95" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="log_scraper" value="Log Scraper&#10;(serial output)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="490" y="110" width="95" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="fault_inj" value="Fault Injector&#10;(QMP commands)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="385" y="165" width="95" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="qemu_mon" value="QEMU Monitor&#10;(power cycle)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="490" y="165" width="95" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Pytest Runner -->
+        <mxCell id="pytest" value="Pytest Runner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;verticalAlign=top;spacingTop=3;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="260" width="230" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="conftest" value="conftest.py&#10;(QEMU fixtures)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="385" y="290" width="95" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="tests" value="test_startup.py&#10;test_telemetry.py&#10;test_actuator.py&#10;test_failsafe.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;align=left;spacingLeft=5;" vertex="1" parent="1">
+          <mxGeometry x="490" y="290" width="95" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="test_config" value="test_config.py&#10;test_diagnostics.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;align=left;spacingLeft=5;" vertex="1" parent="1">
+          <mxGeometry x="385" y="340" width="95" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Results -->
+        <mxCell id="results" value="Results" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;verticalAlign=top;spacingTop=3;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="80" width="190" height="330" as="geometry" />
+        </mxCell>
+        <mxCell id="junit" value="junit.xml" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="680" y="115" width="150" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="timing" value="timing.csv" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="680" y="150" width="150" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="serial_log" value="serial_linux.log&#10;serial_mcu.log" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="680" y="185" width="150" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="coverage" value="coverage.json" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="680" y="230" width="150" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="summary" value="summary.md" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="680" y="265" width="150" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Connections -->
+        <mxCell id="obs_linux" style="strokeColor=#d79b00;strokeWidth=2;dashed=1;" edge="1" source="observer" target="linux_vm" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="obs_mcu" style="strokeColor=#d79b00;strokeWidth=2;dashed=1;" edge="1" source="observer" target="mcu_vm" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pytest_obs" style="strokeColor=#82b366;strokeWidth=2;flowAnimation=1;" edge="1" source="pytest" target="observer" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pytest_res" style="strokeColor=#d6b656;strokeWidth=2;flowAnimation=1;" edge="1" source="pytest" target="results" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pytest_bridge" style="strokeColor=#9673a6;strokeWidth=1;dashed=1;" edge="1" source="pytest" target="bridge" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pytest_bridge_l" value="192.168.7.100" style="edgeLabel;html=1;fontSize=8;fontColor=#9673a6;" vertex="1" connectable="0" parent="pytest_bridge"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

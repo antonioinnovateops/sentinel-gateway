@@ -18,22 +18,7 @@ The main_loop module is the entry point for MCU firmware. It executes the initia
 
 ## 2. Initialization Sequence
 
-```
-main()
-  │
-  ├── [1] hal_init()                    — Configure clocks, GPIO pins
-  ├── [2] pwm_driver_init()             — Set PWM to 0% (SAFE STATE) ← SWE-027-1
-  ├── [3] watchdog_mgr_init()           — Start IWDG (2s timeout) ← SWE-069-1
-  ├── [4] config_store_load(&config)    — Load from flash (or defaults)
-  ├── [5] adc_driver_init()             — Configure ADC + DMA
-  ├── [6] usb_cdc_init()               — Initialize USB CDC-ECM device
-  ├── [7] tcp_stack_init(&config)       — Initialize lwIP, bind ports
-  ├── [8] sensor_acq_init(&config)      — Configure sample timers
-  ├── [9] actuator_ctrl_init(&config)   — Load safety limits
-  ├── [10] health_reporter_init()       — Start 1Hz heartbeat timer
-  │
-  └── super_loop()                      — Infinite main loop
-```
+![MCU Initialization and Super-Loop](../../architecture/diagrams/mcu_init_sequence.drawio.svg)
 
 **Critical ordering**: Steps 2-3 MUST complete before step 6 (USB init). This ensures actuators are in safe state and watchdog is active before any external communication is possible.
 

@@ -55,50 +55,7 @@ This architecture covers the complete Sentinel Gateway system operating in a QEM
 
 ### 2.2 System Decomposition
 
-```
-System: Sentinel Gateway
-│
-├── SE-01: Linux Gateway Subsystem (QEMU ARM64)
-│   ├── SE-01.1: Operating System (Yocto Linux, Poky)
-│   ├── SE-01.2: Gateway Core Application
-│   │   ├── SE-01.2.1: Protobuf Handler (protobuf-c)
-│   │   ├── SE-01.2.2: Sensor Proxy (receive + log)
-│   │   ├── SE-01.2.3: Actuator Proxy (send commands)
-│   │   ├── SE-01.2.4: Health Monitor (heartbeat + recovery)
-│   │   ├── SE-01.2.5: Diagnostics Server (TCP:5002)
-│   │   └── SE-01.2.6: Configuration Manager
-│   └── SE-01.3: BSP Layer
-│       ├── SE-01.3.1: USB Ethernet Driver (CDC-ECM host)
-│       └── SE-01.3.2: Network Stack (TCP/IP)
-│
-├── SE-02: MCU Subsystem (QEMU ARM - STM32U575)
-│   ├── SE-02.1: Application Layer
-│   │   ├── SE-02.1.1: Sensor Acquisition (ADC → protobuf)
-│   │   ├── SE-02.1.2: Actuator Control (protobuf → PWM)
-│   │   ├── SE-02.1.3: Protobuf Handler (nanopb)
-│   │   ├── SE-02.1.4: Watchdog Manager
-│   │   ├── SE-02.1.5: Configuration Store (flash NVM)
-│   │   └── SE-02.1.6: Health Reporter
-│   └── SE-02.2: HAL Layer
-│       ├── SE-02.2.1: ADC Driver
-│       ├── SE-02.2.2: PWM/Timer Driver
-│       ├── SE-02.2.3: GPIO Driver
-│       ├── SE-02.2.4: USB CDC-ECM Device Driver
-│       ├── SE-02.2.5: Flash Driver (NVM)
-│       └── SE-02.2.6: Watchdog Driver (IWDG)
-│
-├── SE-03: Communication Link
-│   ├── SE-03.1: USB 2.0 Physical Layer (emulated)
-│   ├── SE-03.2: CDC-ECM Protocol Layer
-│   ├── SE-03.3: TCP/IP Transport Layer
-│   └── SE-03.4: Protobuf Application Layer
-│
-└── SE-04: QEMU SIL Environment
-    ├── SE-04.1: ARM64 virt Machine (Linux)
-    ├── SE-04.2: ARM Cortex-M Machine (MCU)
-    ├── SE-04.3: Virtual USB Bridge
-    └── SE-04.4: Emulated Peripherals (ADC, GPIO, Timer)
-```
+![System Element Decomposition](../diagrams/system_decomposition.drawio.svg)
 
 ---
 
@@ -144,24 +101,8 @@ System: Sentinel Gateway
 **Purpose**: Reliable, structured data exchange between Linux and MCU
 
 **Stack**:
-```
-┌──────────────────────────────────────────────────────┐
-│ Application:  Protobuf messages (sentinel.proto)     │
-│               Length-prefixed framing (4+1 byte hdr) │
-├──────────────────────────────────────────────────────┤
-│ Transport:    TCP (ports 5000, 5001, 5002)           │
-│               Reliable, ordered byte stream          │
-├──────────────────────────────────────────────────────┤
-│ Network:      IPv4 (192.168.7.0/24 subnet)           │
-│               Static IP assignment                    │
-├──────────────────────────────────────────────────────┤
-│ Data Link:    CDC-ECM (Ethernet over USB)             │
-│               Ethernet frames                         │
-├──────────────────────────────────────────────────────┤
-│ Physical:     USB 2.0 Full Speed (12 Mbps)            │
-│               Virtual USB bridge in QEMU              │
-└──────────────────────────────────────────────────────┘
-```
+
+![Communication Protocol Stack](../diagrams/comm_stack.drawio.svg)
 
 **Port Allocation**:
 
@@ -369,68 +310,15 @@ System: Sentinel Gateway
 
 ### 6.2 Normal Operation Sequence
 
-```
-Linux Gateway                    MCU
-     │                            │
-     │  [TCP:5001] SensorData     │
-     │◄───────────────────────────│  (at configured Hz)
-     │                            │
-     │  [TCP:5001] HealthStatus   │
-     │◄───────────────────────────│  (every 1 second)
-     │                            │
-     │  [TCP:5000] ActuatorCommand│
-     │───────────────────────────►│
-     │                            │
-     │  [TCP:5000] ActuatorResponse│
-     │◄───────────────────────────│
-     │                            │
-     │  Log to file               │
-     ├───►                        │
-     │                            │
-```
+![Normal Operation Sequence](../diagrams/sequence_normal.drawio.svg)
 
 ### 6.3 Fail-Safe Sequence
 
-```
-Linux Gateway                    MCU
-     │                            │
-     │  ... communication loss ...│
-     │                            │
-     │  (t=0) Last heartbeat      │
-     │                            │  (t=3s) No Linux msgs
-     │                            │  → Enter FAILSAFE
-     │                            │  → Actuators to 0%
-     │  (t=3s) No MCU heartbeat   │  → HealthStatus: FAILSAFE
-     │  → Log COMM_LOSS           │
-     │  (t=5s) Attempt recovery   │
-     │  → USB power cycle         │
-     │                            │  (reset)
-     │                            │  → Boot, init, safe state
-     │  → Wait for USB enumerate  │  → USB CDC-ECM up
-     │  → TCP reconnect           │  → TCP reconnect
-     │  → State sync request      │
-     │◄───────────────────────────│  → Full state response
-     │  → Resume NORMAL           │  → Resume NORMAL
-```
+![Fail-Safe and Recovery Sequence](../diagrams/sequence_failsafe.drawio.svg)
 
 ### 6.4 Configuration Update Sequence
 
-```
-Linux Gateway                    MCU
-     │                            │
-     │  [TCP:5000] ConfigUpdate   │
-     │  {channel:0, rate:50}      │
-     │───────────────────────────►│
-     │                            │  → Validate (1-100 Hz)
-     │                            │  → Apply to timer
-     │                            │  → Store in flash (CRC)
-     │  [TCP:5000] ConfigResponse │
-     │  {status:OK}               │
-     │◄───────────────────────────│
-     │                            │
-     │  (Now CH0 streams at 50Hz) │
-     │◄───────────────────────────│
-```
+![Configuration Update Sequence](../diagrams/sequence_config.drawio.svg)
 
 ---
 

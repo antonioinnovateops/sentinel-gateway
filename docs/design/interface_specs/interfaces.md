@@ -152,14 +152,7 @@ typedef enum {
 ## 2. Wire Frame Format
 
 ### 2.1 Frame Structure
-```
-Byte offset:  [0]  [1]  [2]  [3]  [4]  [5 ... N+4]
-              └─── Length (LE) ───┘  Type  └─ Payload ─┘
-
-Length: 4-byte unsigned little-endian = N (payload size only, excludes header)
-Type:   1-byte message type identifier (msg_type_t)
-Payload: N bytes of protobuf-encoded message
-```
+![Wire Frame Format](../../architecture/diagrams/wire_frame_format.drawio.svg)
 
 ### 2.2 Maximum Frame Size
 - Maximum payload: 512 bytes

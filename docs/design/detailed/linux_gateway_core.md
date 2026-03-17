@@ -18,19 +18,7 @@ The gateway_core module is the main entry point for the Linux gateway applicatio
 
 ## 2. Process Architecture
 
-```
-sentinel-gw (single process)
-├── Main Thread
-│   ├── epoll event loop
-│   ├── TCP I/O handling
-│   ├── Message dispatch
-│   └── Signal handling
-│
-└── Logger Thread
-    ├── Dequeue from ring buffer
-    ├── Write to log files
-    └── fsync every 5 seconds
-```
+![Linux Gateway Process Architecture](../../architecture/diagrams/linux_process_arch.drawio.svg)
 
 ## 3. Startup Sequence
 

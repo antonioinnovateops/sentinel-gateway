@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-03-17" type="device">
+  <diagram id="act-safety" name="Actuator Command Safety Flow">
+    <mxGraphModel dx="1000" dy="600" grid="1" gridSize="10" guides="1"
+      tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1"
+      pageWidth="1000" pageHeight="500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Actuator Command Safety Validation Flow (ASIL-B)" style="text;html=1;fontSize=18;fontStyle=1;align=center;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="200" y="10" width="600" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="input" value="ActuatorCommand&#10;(from TCP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="120" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s1" value="[1] Decode&#10;Protobuf" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="190" y="80" width="100" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s2" value="[2] Validate&#10;Actuator ID" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="80" width="100" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s3" value="[3] Check&#10;Rate Limit&#10;(50/sec)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="80" width="100" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s4" value="[4] Range&#10;Validation&#10;(min/max)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="610" y="80" width="100" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s5" value="[5] Clamp to&#10;Safety Limits&#10;(e.g. 95% max)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="750" y="80" width="110" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s6" value="[6] Write PWM&#10;Register" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#deebf7;strokeColor=#6c8ebf;fontSize=10;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="610" y="200" width="100" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s7" value="[7] Readback&#10;Verify" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="750" y="200" width="100" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s8" value="[8] Send&#10;ActuatorResponse&#10;(OK)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="750" y="310" width="120" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Error paths -->
+        <mxCell id="err_decode" value="Decode Error&#10;FAIL-SAFE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="190" y="200" width="100" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="err_invalid" value="INVALID&#10;ACTUATOR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="330" y="200" width="100" height="35" as="geometry" />
+        </mxCell>
+
+        <mxCell id="err_rate" value="RATE&#10;LIMITED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="470" y="200" width="100" height="35" as="geometry" />
+        </mxCell>
+
+        <mxCell id="err_readback" value="Readback Mismatch&#10;FAIL-SAFE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="610" y="310" width="120" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Normal flow edges -->
+        <mxCell id="e01" style="strokeColor=#82b366;strokeWidth=2;flowAnimation=1;" edge="1" source="input" target="s1" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e12" style="strokeColor=#82b366;strokeWidth=2;flowAnimation=1;" edge="1" source="s1" target="s2" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e23" style="strokeColor=#82b366;strokeWidth=2;flowAnimation=1;" edge="1" source="s2" target="s3" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e34" style="strokeColor=#82b366;strokeWidth=2;flowAnimation=1;" edge="1" source="s3" target="s4" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e45" style="strokeColor=#82b366;strokeWidth=2;flowAnimation=1;" edge="1" source="s4" target="s5" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e56" style="strokeColor=#82b366;strokeWidth=2;flowAnimation=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" source="s5" target="s7" parent="1">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="805" y="160" /><mxPoint x="800" y="160" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e5_6" style="strokeColor=#6c8ebf;strokeWidth=2;flowAnimation=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" source="s7" target="s6" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e78" style="strokeColor=#82b366;strokeWidth=2;flowAnimation=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" source="s7" target="s8" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Error edges -->
+        <mxCell id="ee1" style="strokeColor=#b85450;strokeWidth=1;dashed=1;" edge="1" source="s1" target="err_decode" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ee1l" value="fail" style="edgeLabel;html=1;fontSize=8;fontColor=#b85450;" vertex="1" connectable="0" parent="ee1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ee2" style="strokeColor=#d6b656;strokeWidth=1;dashed=1;" edge="1" source="s2" target="err_invalid" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ee2l" value="fail" style="edgeLabel;html=1;fontSize=8;fontColor=#d6b656;" vertex="1" connectable="0" parent="ee2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ee3" style="strokeColor=#d6b656;strokeWidth=1;dashed=1;" edge="1" source="s3" target="err_rate" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ee3l" value="fail" style="edgeLabel;html=1;fontSize=8;fontColor=#d6b656;" vertex="1" connectable="0" parent="ee3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ee4" style="strokeColor=#b85450;strokeWidth=1;dashed=1;" edge="1" source="s7" target="err_readback" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ee4l" value="mismatch" style="edgeLabel;html=1;fontSize=8;fontColor=#b85450;" vertex="1" connectable="0" parent="ee4"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Write before read label -->
+        <mxCell id="wr_note" value="Write then Readback&#10;(detect register corruption)" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#6c8ebf;align=center;" vertex="1" parent="1">
+          <mxGeometry x="620" y="168" width="170" height="25" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -328,7 +328,7 @@ This document specifies the system requirements for the Sentinel Gateway. It ser
 - **Acceptance**: Telemetry data received on port 5001
 
 **[SYS-034] Protobuf Message Format**
-- **Description**: All inter-processor messages shall use Protocol Buffers v3 encoding as defined in `src/proto/sentinel.proto`
+- **Description**: All inter-processor messages shall use Protocol Buffers v3 encoding as defined in `docs/design/interface_specs/proto/sentinel.proto`
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [STKH-007]
