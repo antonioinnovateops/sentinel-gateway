@@ -51,7 +51,7 @@ This plan defines MISRA C:2012 compliance scope, tooling, and deviation handling
 - **Risk**: None (Linux is not safety-critical target)
 
 ### DEV-002: Advisory rules in generated protobuf code
-- **Scope**: Files in `src/*/app/protobuf_handler/` with `.pb-c.*` or `.pb.*` extension
+- **Scope**: Auto-generated protobuf files (`*.pb-c.c`, `*.pb-c.h`, `*.pb.c`, `*.pb.h`) in `src/linux/generated/` and `src/mcu/generated/`
 - **Rationale**: Auto-generated code; not modifiable without breaking regeneration
 - **Risk**: Low (nanopb is widely used in safety-critical projects)
 

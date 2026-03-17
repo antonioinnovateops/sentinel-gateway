@@ -35,10 +35,10 @@ This document captures stakeholder needs and expectations for the Sentinel Gatew
 - **Acceptance**: ≥4 sensor channels, configurable sample rates
 
 **[STKH-002] Real-Time Sensor Sampling**
-- **Description**: Sensor data shall be sampled with deterministic timing (jitter ≤ 1ms)
+- **Description**: Sensor data shall be sampled with deterministic timing (jitter ≤ 500 µs)
 - **Rationale**: Process control applications require predictable measurement intervals
 - **Priority**: Must Have
-- **Acceptance**: Demonstrated jitter ≤ 1ms at 100 Hz sample rate
+- **Acceptance**: Demonstrated jitter ≤ 500 µs at 100 Hz sample rate
 
 **[STKH-003] Sensor Data Logging**
 - **Description**: All sensor data shall be logged on the gateway with timestamps for later retrieval

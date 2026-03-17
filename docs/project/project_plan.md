@@ -75,30 +75,31 @@ aspice_process: "MAN.3 Project Management"
 | WP-01 | Stakeholder Requirements | SYS.1 | ✅ Complete |
 | WP-02 | System Requirements Specification | SYS.2 | ✅ Complete |
 | WP-03 | System Architecture Document | SYS.3 | ✅ Complete |
-| WP-04 | Software Requirements Specification | SWE.1 | 🔲 Pending |
-| WP-05 | Software Architecture Document | SWE.2 | 🔲 Pending |
-| WP-06 | Architecture Decision Records | SWE.2 | 🔲 Pending |
-| WP-07 | Interface Specifications | SWE.2 | 🔲 Pending |
-| WP-08 | Detailed Design Documents | SWE.3 | 🔲 Pending |
-| WP-09 | Source Code (Linux) | SWE.3 | 🔲 Pending |
-| WP-10 | Source Code (MCU) | SWE.3 | 🔲 Pending |
-| WP-11 | Unit Test Specifications | SWE.4 | 🔲 Pending |
-| WP-12 | Unit Test Code | SWE.4 | 🔲 Pending |
-| WP-13 | Integration Test Specifications | SWE.5 | 🔲 Pending |
-| WP-14 | Integration Test Code | SWE.5 | 🔲 Pending |
-| WP-15 | Qualification Test Specifications | SWE.6 | 🔲 Pending |
-| WP-16 | Qualification Test Code | SWE.6 | 🔲 Pending |
-| WP-17 | MISRA Compliance Report | SUP.2 | 🔲 Pending |
-| WP-18 | Traceability Matrix | SUP.8 | 🔲 Pending |
+| WP-04 | Software Requirements Specification | SWE.1 | ✅ Complete (80 SWE reqs) |
+| WP-05 | Software Architecture Document | SWE.2 | ✅ Complete |
+| WP-06 | Architecture Decision Records | SWE.2 | ✅ Complete (5 ADRs in SAD) |
+| WP-07 | Interface Specifications | SWE.2 | ✅ Complete (IFS-001 + proto) |
+| WP-08 | Detailed Design Documents | SWE.3 | ✅ Complete (5 component docs) |
+| WP-09 | Source Code (Linux) | SWE.3 | 🔲 Phase 4 |
+| WP-10 | Source Code (MCU) | SWE.3 | 🔲 Phase 4 |
+| WP-11 | Unit Test Specifications | SWE.4 | ✅ Complete (84 test cases) |
+| WP-12 | Unit Test Code | SWE.4 | 🔲 Phase 5 |
+| WP-13 | Integration Test Specifications | SWE.5 | ✅ Complete (12 scenarios) |
+| WP-14 | Integration Test Code | SWE.5 | 🔲 Phase 6 |
+| WP-15 | Qualification Test Specifications | SWE.6 | ✅ Complete (QTP-001) |
+| WP-16 | Qualification Test Code | SWE.6 | 🔲 Phase 7 |
+| WP-17 | MISRA Compliance Plan | SUP.2 | ✅ Complete (plan only; report Phase 8) |
+| WP-18 | Traceability Matrices | SUP.8 | ✅ Complete (STKH→SYS, SYS→SWE) |
 | WP-19 | Project Plan | MAN.3 | ✅ Complete |
-| WP-20 | Risk Register | MAN.5 | ✅ Complete |
-| WP-21 | Safety Analysis (FMEA) | Safety | 🔲 Pending |
+| WP-20 | Risk Register | MAN.5 | ✅ Complete (8 risks) |
+| WP-21 | Safety Analysis (FMEA) | Safety | ✅ Complete (18 failure modes) |
 | WP-22 | Protobuf Schema | SWE.2 | ✅ Complete |
-| WP-23 | Build Environment Spec | SWE.3 | ✅ Complete |
-| WP-24 | SIL Environment Spec | SWE.6 | ✅ Complete |
-| WP-25 | Build System Spec | SWE.3 | ✅ Complete |
-| WP-26 | Container Dockerfiles | SWE.3 | 🔲 Phase 3 |
-| WP-27 | QEMU Launch Scripts | SWE.6 | 🔲 Phase 3 |
+| WP-23 | Build Environment Spec | SWE.3 | ✅ Complete (BUILD-001) |
+| WP-24 | SIL Environment Spec | SWE.6 | ✅ Complete (SIL-001) |
+| WP-25 | Build System Spec | SWE.3 | ✅ Complete (BSS-001) |
+| WP-26 | Architecture Diagrams | SWE.2 | ✅ Complete (19 .drawio.svg) |
+| WP-27 | Container Dockerfiles | SWE.3 | 🔲 Phase 3 |
+| WP-28 | QEMU Launch Scripts | SWE.6 | 🔲 Phase 3 |
 
 ## 4. Benchmarking Protocol
 

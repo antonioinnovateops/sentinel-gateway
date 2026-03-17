@@ -35,7 +35,7 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 5. Write output to `docs/architecture/software/SWAD.md`
 6. Generate Architecture Decision Records in `docs/architecture/software/adr/`
 7. Generate interface specifications in `docs/design/interface_specs/`
-8. Generate component diagrams (PlantUML) in `docs/architecture/diagrams/`
+8. Generate component diagrams (draw.io `.drawio.svg`) in `docs/architecture/diagrams/`
 9. Self-review: verify all SWE requirements allocated to components
 10. Self-review: verify all interfaces fully specified (types, ranges, units)
 
@@ -43,7 +43,20 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 
 **Skill Reference**: `.claude/skills/architecture-agent/SKILL.md`
 
-### Phase 3: Detailed Design & Implementation (SWE.3)
+### Phase 3: Container Build Environment Setup
+
+1. Read `docs/design/build_environment.md` (BUILD-001) — container pipeline spec
+2. Read `docs/design/build_system_spec.md` (BSS-001) — CMake/toolchain spec
+3. Read `docs/design/sil_environment.md` (SIL-001) — QEMU SIL spec
+4. Create Dockerfiles in `docker/` for all 5 images (build-linux, build-mcu, sil, yocto, analysis)
+5. Create `docker-compose.yml` per BUILD-001 Section 4
+6. Create CMake toolchain files in `cmake/`
+7. Create QEMU launch scripts in `tools/sil/`
+8. Verify: `docker compose build` succeeds, QEMU boots both VMs
+
+**Quality Gate**: All containers build, QEMU dual-VM boots and establishes TCP connectivity.
+
+### Phase 4: Implementation (SWE.3)
 
 1. Read the approved SWAD from Phase 2
 2. Read interface specifications
@@ -52,10 +65,10 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
    b. Implement in C (MISRA C:2012 compliant)
    c. Add Doxygen headers with `@implements` tags
    d. Ensure every function traces to a requirement
-4. Implement shared protobuf definitions in `src/proto/`
+4. Generate protobuf code from `docs/design/interface_specs/proto/sentinel.proto`
 5. Implement Linux gateway in `src/linux/`
 6. Implement MCU firmware in `src/mcu/`
-7. Write CMakeLists.txt for all build targets
+7. Write CMakeLists.txt and Dockerfiles per `docs/design/build_system_spec.md` and `docs/design/build_environment.md`
 8. Self-review: MISRA compliance check
 9. Self-review: verify all `@implements` tags match SWRS requirements
 
@@ -63,7 +76,7 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 
 **Skill Reference**: `.claude/skills/implementation-agent/SKILL.md`
 
-### Phase 4: Unit Verification (SWE.4)
+### Phase 5: Unit Verification (SWE.4)
 
 1. Read source code from Phase 3
 2. For each function:
@@ -78,20 +91,21 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 
 **Skill Reference**: `.claude/skills/verification-agent/SKILL.md`
 
-### Phase 5: Integration Testing (SWE.5)
+### Phase 6: Integration Testing (SWE.5)
 
-1. Design integration tests for component interactions
-2. Test protobuf communication between Linux ↔ MCU
-3. Test USB Ethernet stack end-to-end
-4. Test health monitoring and watchdog recovery
-5. Write test specifications in `docs/test/integration_test_spec/`
-6. Place test code in `tests/integration/`
+1. Read `docs/test/integration_test_spec/integration_test_plan.md` (ITP-001) — 12 test scenarios
+2. Read `docs/design/sil_environment.md` (SIL-001) — fault injection methods
+3. Implement integration tests in `tests/integration/` (Python pytest)
+4. Write `tests/integration/conftest.py` (QEMU fixtures per SIL-001 Section 4)
+5. Test protobuf communication between Linux ↔ MCU in `sentinel-sil` container
+6. Test fault injection scenarios (USB disconnect, MCU freeze, etc.)
+7. Run: `docker compose up sil`
 
-**Quality Gate**: All integration tests pass in QEMU SIL environment.
+**Quality Gate**: All 12 integration scenarios pass in containerized QEMU SIL environment.
 
 **Skill Reference**: `.claude/skills/verification-agent/SKILL.md`
 
-### Phase 6: System Qualification (SWE.6)
+### Phase 7: System Qualification (SWE.6)
 
 1. Design qualification tests against system requirements
 2. Test complete system behavior in QEMU SIL
@@ -101,7 +115,7 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 
 **Quality Gate**: All system requirements verified, test report complete.
 
-### Phase 7: Review & Compliance (SUP.2)
+### Phase 8: Review & Compliance (SUP.2)
 
 1. Run MISRA C:2012 static analysis on all source files
 2. Verify traceability: SYS → SWE → Architecture → Code → Tests

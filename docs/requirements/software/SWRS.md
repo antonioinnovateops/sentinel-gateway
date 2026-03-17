@@ -1015,32 +1015,25 @@ This SWRS covers all software components on both the Linux gateway (SE-01) and M
 
 ## 9. Requirement Summary
 
-| Category | ID Range | Count | Safety (ASIL-B) |
-|----------|----------|-------|:---:|
-| MCU ADC Driver | SWE-001-* to SWE-011-* | 5 | 0 |
-| MCU Sensor Calibration | SWE-002-* to SWE-005-* | 4 | 0 |
-| MCU Sensor Packaging | SWE-007-* to SWE-008-* | 3 | 0 |
-| MCU Sample Rate | SWE-009-* to SWE-010-* | 2 | 0 |
-| MCU PWM Output | SWE-016-* to SWE-017-* | 3 | 3 |
-| MCU Command Processing | SWE-018-* to SWE-024-* | 8 | 7 |
-| MCU Fail-Safe | SWE-026-* to SWE-029-* | 4 | 4 |
-| MCU USB/TCP | SWE-030-* to SWE-037-* | 8 | 0 |
-| MCU Health | SWE-038-* to SWE-041-* | 3 | 2 |
-| MCU Watchdog | SWE-069-* to SWE-071-* | 3 | 2 |
-| MCU Config | SWE-058-* to SWE-065-* | 8 | 2 |
-| MCU Memory | SWE-072-* to SWE-073-* | 2 | 1 |
-| MCU Boot | SWE-067-* | 1 | 1 |
-| Linux Core | SWE-046-* | 2 | 0 |
-| Linux Sensor Proxy | SWE-013-* to SWE-015-* | 3 | 0 |
+| Category | IDs | Count | Safety (ASIL-B) |
+|----------|-----|-------|:---:|
+| MCU Sensor Acquisition | SWE-001-1/2/3, SWE-002-1, SWE-003-1, SWE-004-1, SWE-005-1, SWE-007-1/2, SWE-008-1, SWE-009-1, SWE-010-1, SWE-011-1 | 13 | 0 |
+| MCU PWM / Actuator | SWE-016-1/2, SWE-017-1, SWE-018-1, SWE-019-1, SWE-021-1, SWE-022-1/2, SWE-023-1, SWE-024-1 | 10 | 10 |
+| MCU Fail-Safe | SWE-026-1, SWE-027-1, SWE-028-1, SWE-029-1 | 4 | 4 |
+| MCU Protocol / TCP | SWE-030-1, SWE-031-1, SWE-032-1, SWE-033-1, SWE-035-1/2, SWE-036-1, SWE-037-1 | 8 | 0 |
+| MCU Health Reporter | SWE-038-1, SWE-039-1, SWE-040-1, SWE-041-1 | 4 | 3 |
+| MCU Config Store | SWE-058-1, SWE-059-1, SWE-060-1, SWE-062-1, SWE-063-1, SWE-064-1, SWE-065-1 | 7 | 2 |
+| MCU Watchdog / Memory | SWE-069-1, SWE-070-1, SWE-071-1, SWE-072-1, SWE-073-1 | 5 | 3 |
+| MCU Boot | SWE-067-1 | 1 | 1 |
+| Linux Gateway Core | SWE-046-1, SWE-066-1 | 2 | 0 |
+| Linux Sensor Proxy | SWE-013-1/2, SWE-015-1 | 3 | 0 |
 | Linux Actuator Proxy | SWE-018-2, SWE-019-2 | 2 | 2 |
-| Linux Health Monitor | SWE-039-* to SWE-045-* | 5 | 1 |
-| Linux Diagnostics | SWE-046-2 to SWE-054-* | 7 | 0 |
-| Linux Logging | SWE-052-* to SWE-055-* | 4 | 0 |
-| Linux Wire Protocol | SWE-035-3 to SWE-036-2 | 3 | 0 |
+| Linux Health / Recovery | SWE-042-1, SWE-043-1/2, SWE-044-1, SWE-045-1 | 5 | 0 |
+| Linux Diagnostics | SWE-046-2, SWE-047-1, SWE-048-1, SWE-049-1, SWE-050-1, SWE-051-1, SWE-057-1 | 7 | 0 |
+| Linux Logging | SWE-052-1, SWE-053-1, SWE-054-1, SWE-055-1 | 4 | 0 |
+| Linux Wire Protocol | SWE-035-3/4, SWE-036-2 | 3 | 0 |
 | Linux Config | SWE-058-2, SWE-061-1 | 2 | 0 |
-| Linux Boot | SWE-066-1, SWE-057-1 | 2 | 0 |
-| Shared TCP Reconnect | SWE-043-2 | 1 | 0 |
-| **TOTAL** | | **85** | **25** |
+| **TOTAL** | | **80** | **25** |
 
 ---
 

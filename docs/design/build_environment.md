@@ -69,7 +69,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Stage 2: Build
 FROM toolchain AS build
 COPY src/linux/ /workspace/src/linux/
-COPY src/proto/ /workspace/src/proto/
+COPY docs/design/interface_specs/proto/ /workspace/src/proto/
 COPY CMakeLists.txt /workspace/
 WORKDIR /workspace/build
 RUN cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux.cmake \
@@ -125,7 +125,7 @@ RUN pip3 install --no-cache-dir nanopb==0.4.8
 # Stage 2: Build
 FROM toolchain AS build
 COPY src/mcu/ /workspace/src/mcu/
-COPY src/proto/ /workspace/src/proto/
+COPY docs/design/interface_specs/proto/ /workspace/src/proto/
 COPY CMakeLists.txt /workspace/
 WORKDIR /workspace/build
 RUN cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi.cmake \

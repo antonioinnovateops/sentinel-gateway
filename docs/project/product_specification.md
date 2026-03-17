@@ -48,7 +48,7 @@ The system demonstrates a modern embedded architecture pattern: **Linux SoC + MC
 - Diagnostic shell (UDS-inspired command interface)
 
 **MCU Side (STM32U575)**:
-- Bare-metal C firmware (no RTOS for simplicity; FreeRTOS as stretch goal)
+- Bare-metal C firmware with super-loop architecture (no RTOS — see ADR-003 in SAD)
 - Sensor acquisition: 4x ADC channels (temperature, humidity, pressure, light)
 - Actuator control: 2x PWM outputs (fan speed, valve position)
 - Protobuf message encoding/decoding (nanopb — lightweight protobuf for C)
@@ -61,7 +61,7 @@ The system demonstrates a modern embedded architecture pattern: **Linux SoC + MC
 - MCU acts as USB device (CDC-ECM gadget)
 - Linux host enumerates USB device, creates `usb0` network interface
 - Static IP assignment: Linux = 192.168.7.1, MCU = 192.168.7.2
-- TCP port 5000 for command/response, TCP port 5001 for streaming telemetry
+- TCP port 5000 for command/response, TCP port 5001 for streaming telemetry, TCP port 5002 for diagnostics
 
 **Application Protocol**: Protocol Buffers v3
 - Defined in `docs/design/interface_specs/proto/sentinel.proto`
@@ -79,7 +79,7 @@ The system demonstrates a modern embedded architecture pattern: **Linux SoC + MC
 ### 4.2 Actuator Control
 - Linux gateway shall send `ActuatorCommand` messages to MCU via TCP port 5000
 - MCU shall validate commands (range check, rate limiting)
-- MCU shall apply PWM output within 10ms of command receipt
+- MCU shall apply PWM output within 20ms of command receipt
 - MCU shall acknowledge command execution with status response
 
 ### 4.3 Health Monitoring
