@@ -40,34 +40,7 @@ Prove that with a sufficiently detailed specification and the right agent skill-
 
 > **Note**: This is a **specification-only repository**. No implementation code exists yet — only Markdown specs, diagrams, protobuf schemas, and empty directory placeholders. Implementation is triggered in Phase 3+ (see Project Plan).
 
-```
-sentinel-gateway/
-├── .github/workflows/          # CI/CD pipeline specs
-├── .claude/skills/             # AI agent skill definitions
-├── docs/
-│   ├── requirements/           # SYS.2, SWE.1 work products
-│   ├── architecture/           # SYS.3, SWE.2 work products + diagrams
-│   ├── design/                 # SWE.3 detailed design + build/SIL specs
-│   │   ├── detailed/           # Component-level design docs
-│   │   ├── interface_specs/    # Wire format, shared types, protobuf schema
-│   │   ├── build_environment.md    # Container build pipeline spec (BUILD-001)
-│   │   ├── build_system_spec.md    # CMake/toolchain spec (BSS-001)
-│   │   └── sil_environment.md      # QEMU SIL test environment spec (SIL-001)
-│   ├── test/                   # SWE.4, SWE.5, SWE.6 test specs
-│   ├── reviews/                # SUP.1 review records
-│   ├── project/                # MAN.3 project management
-│   ├── safety/                 # Safety analysis (FMEA)
-│   └── traceability/           # Cross-cutting traceability matrices
-├── src/
-│   ├── linux/                  # Linux gateway (empty — Phase 4)
-│   └── mcu/                    # STM32U575 firmware (empty — Phase 4)
-├── tests/                      # All test code (empty — Phase 5+)
-├── tools/                      # Build scripts, QEMU configs
-├── config/                     # Toolchain configs (empty — Phase 3)
-├── docker/                     # Dockerfiles (empty — Phase 3)
-├── CHANGELOG.md                # Release history
-└── AGENTS.md                   # Agent orchestration instructions
-```
+![Repository Structure](docs/architecture/diagrams/repo_structure.drawio.svg)
 
 ## ASPICE Process Mapping
 

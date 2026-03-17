@@ -227,22 +227,8 @@ WORKDIR /workspace
 - `core-image-minimal` + sentinel-gw recipe
 
 **Layer structure** (specification):
-```
-meta-sentinel/
-├── conf/
-│   └── layer.conf
-├── recipes-core/
-│   └── sentinel-gw/
-│       ├── sentinel-gw_1.0.0.bb
-│       └── files/
-│           └── sentinel-gw.service     # systemd unit
-├── recipes-connectivity/
-│   └── usb-gadget/
-│       └── usb-cdc-ecm.bb            # CDC-ECM config
-└── recipes-kernel/
-    └── linux/
-        └── linux-yocto_%.bbappend     # USB gadget + CDC-ECM kernel config
-```
+
+![Yocto meta-sentinel Layer Structure](../architecture/diagrams/yocto_layer_structure.drawio.svg)
 
 **Key recipe features**:
 - `sentinel-gw` starts via systemd on boot
