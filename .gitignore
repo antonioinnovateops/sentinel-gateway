@@ -43,3 +43,4 @@ tests/results/
 *.gcda
 *.gcno
 coverage/
+build-native/

@@ -1,0 +1,14 @@
+/**
+ * @file sentinel_version.h
+ * @brief Auto-generated version header
+ */
+
+#ifndef SENTINEL_VERSION_H
+#define SENTINEL_VERSION_H
+
+#define SENTINEL_VERSION_MAJOR  @PROJECT_VERSION_MAJOR@
+#define SENTINEL_VERSION_MINOR  @PROJECT_VERSION_MINOR@
+#define SENTINEL_VERSION_PATCH  @PROJECT_VERSION_PATCH@
+#define SENTINEL_VERSION_STRING "@PROJECT_VERSION@"
+
+#endif /* SENTINEL_VERSION_H */

@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  build-linux:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.build-linux
+      target: build
+    volumes:
+      - ./build/linux:/workspace/output
+    network_mode: none
+
+  build-mcu:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.build-mcu
+      target: build
+    volumes:
+      - ./build/mcu:/workspace/output
+    network_mode: none
+
+  analysis:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.analysis
+    volumes:
+      - .:/workspace/src:ro
+      - ./results/analysis:/workspace/output
+    depends_on:
+      build-linux:
+        condition: service_completed_successfully
+      build-mcu:
+        condition: service_completed_successfully
+    command: >
+      bash -c "
+        echo '=== MISRA Analysis ===' &&
+        cppcheck --enable=all --std=c11
+          --suppress=missingIncludeSystem
+          /workspace/src/src/common/
+          /workspace/src/src/linux/
+          /workspace/src/src/mcu/
+          --xml 2>/workspace/output/cppcheck.xml &&
+        echo '=== Analysis Complete ==='
+      "
+
+  sil:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.sil
+    volumes:
+      - ./build/linux:/workspace/artifacts/linux:ro
+      - ./build/mcu:/workspace/artifacts/mcu:ro
+      - ./tests:/workspace/tests:ro
+      - ./tools/sil:/workspace/sil:ro
+      - ./results/sil:/workspace/results
+    privileged: true
+    depends_on:
+      build-linux:
+        condition: service_completed_successfully
+      build-mcu:
+        condition: service_completed_successfully
+    command: >
+      bash -c "
+        echo '=== SIL Test Environment ===' &&
+        cd /workspace/tests &&
+        python3 -m pytest -v --timeout=60
+          --junitxml=/workspace/results/sil-results.xml
+          || true
+      "
+
+volumes:
+  build-cache-linux:
+  build-cache-mcu:

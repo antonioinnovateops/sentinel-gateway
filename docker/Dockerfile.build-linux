@@ -1,0 +1,34 @@
+FROM ubuntu:24.04 AS toolchain
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    cmake \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m builder || true
+USER builder
+WORKDIR /workspace
+
+FROM toolchain AS build
+
+COPY --chown=builder:builder CMakeLists.txt /workspace/
+COPY --chown=builder:builder config/ /workspace/config/
+COPY --chown=builder:builder cmake/ /workspace/cmake/
+COPY --chown=builder:builder src/ /workspace/src/
+
+RUN mkdir -p build && cd build && \
+    cmake .. \
+      -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux.cmake \
+      -DBUILD_LINUX=ON \
+      -DBUILD_MCU=OFF \
+      -DBUILD_TESTS=OFF \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j$(nproc) VERBOSE=1
+
+RUN mkdir -p /workspace/output && \
+    cp build/sentinel-gw /workspace/output/
+
+FROM scratch AS artifact
+COPY --from=build /workspace/output/sentinel-gw /sentinel-gw
