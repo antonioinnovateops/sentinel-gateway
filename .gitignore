@@ -47,3 +47,4 @@ build-native/
 events.jsonl
 sensor_data.jsonl
 build-*/
+results/

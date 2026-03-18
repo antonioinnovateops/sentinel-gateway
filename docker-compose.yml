@@ -93,7 +93,7 @@ services:
       echo 'MCU: ARM Linux ELF via qemu-arm-static (user-mode)' &&
       echo 'Gateway: Native x86_64 or qemu-aarch64-static' &&
       cd /workspace/tests/qemu &&
-      python3 -m pytest test_qemu_sil.py -v --timeout=120 --junitxml=/workspace/results/qemu-sil-results.xml -x"
+      python3 -m pytest test_qemu_sil.py -v --timeout=120 --junitxml=/workspace/results/qemu-sil-results.xml"
 
 volumes:
   build-cache-linux:
