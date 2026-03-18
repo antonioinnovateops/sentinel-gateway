@@ -21,6 +21,7 @@
 #include <time.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 static volatile sig_atomic_t g_running = 1;
 
@@ -132,8 +133,10 @@ sentinel_err_t gateway_init(void)
     printf("[GW] Listening on ports %u (telemetry) and %u (diagnostics)\n",
            SENTINEL_PORT_TELEMETRY, SENTINEL_PORT_DIAG);
 
-    /* Connect to MCU command channel */
-    err = transport_connect_command(SENTINEL_MCU_IP);
+    /* Connect to MCU command channel (allow env override for SIL testing) */
+    const char *mcu_ip = getenv("SENTINEL_MCU_HOST");
+    if (mcu_ip == NULL) { mcu_ip = SENTINEL_MCU_IP; }
+    err = transport_connect_command(mcu_ip);
     if (err != SENTINEL_OK) {
         fprintf(stderr, "[GW] Warning: MCU not yet available on %s:%u\n",
                 SENTINEL_MCU_IP, SENTINEL_PORT_COMMAND);

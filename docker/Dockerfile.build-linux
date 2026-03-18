@@ -30,5 +30,4 @@ RUN mkdir -p build && cd build && \
 RUN mkdir -p /workspace/output && \
     cp build/sentinel-gw /workspace/output/
 
-FROM scratch AS artifact
-COPY --from=build /workspace/output/sentinel-gw /sentinel-gw
+CMD ["bash", "-c", "cp /workspace/build/sentinel-gw /workspace/output/ && echo 'sentinel-gw copied to output'"]

@@ -83,6 +83,10 @@ services:
       - ./build/qemu-mcu:/workspace/artifacts/mcu-qemu:ro
       - ./tests:/workspace/tests:ro
       - ./results/qemu-sil:/workspace/results
+      - ./CMakeLists.txt:/workspace/CMakeLists.txt:ro
+      - ./config:/workspace/config:ro
+      - ./cmake:/workspace/cmake:ro
+      - ./src:/workspace/src:ro
     depends_on:
       build-linux:
         condition: service_completed_successfully
