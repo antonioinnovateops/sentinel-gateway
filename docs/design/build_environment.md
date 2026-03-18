@@ -2,8 +2,8 @@
 title: "Build Environment Specification"
 document_id: "BUILD-001"
 project: "Sentinel Gateway"
-version: "1.0.0"
-date: 2026-03-17
+version: "2.0.0"
+date: 2026-03-18
 status: "Approved"
 aspice_process: "SWE.3 Software Detailed Design"
 ---
@@ -38,8 +38,11 @@ This document specifies:
 - **Multi-stage builds**: Separate build-time deps from runtime
 - **Layer caching**: Toolchain install layers cached; source copied in final stage
 - **Reproducible**: All tool versions pinned (no `latest` tags)
-- **Rootless**: All containers run as non-root user `builder` (UID 1000)
+- **Rootless**: All containers run as non-root user `builder`
+- **UID collision handling**: Ubuntu 24.04 has uid 1000 user; use `useradd -m builder || true`
 - **No network at build time**: `--network=none` for firmware builds (air-gapped reproducibility)
+
+**v2.0 Note**: QEMU SIL uses user-mode emulation (not full system emulation). See `sil_environment.md` for details.
 
 ## 3. Container Specifications
 
@@ -100,42 +103,39 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 **Purpose**: Cross-compile MCU firmware for ARM Cortex-M33 (STM32U575).
 
 **Toolchain**:
-- `arm-none-eabi-gcc` 13.2.rel1 (ARM official release)
+- `arm-none-eabi-gcc` 13.x (Ubuntu package — NOT from arm.com download)
 - CMake 3.28+
-- nanopb 0.4.8 (protobuf code generator for embedded)
-- Python 3.12 (for nanopb generator)
+- libnewlib-arm-none-eabi (required for nosys specs)
+
+**IMPORTANT**: Do NOT download ARM toolchain from `developer.arm.com` — the URL structure changes frequently and breaks builds. Use Ubuntu packages instead.
 
 **Build steps**:
-```
+```dockerfile
 # Stage 1: Install toolchain
 FROM ubuntu:24.04 AS toolchain
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    cmake make python3 python3-pip wget \
+    cmake make \
+    gcc-arm-none-eabi \
+    libnewlib-arm-none-eabi \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ARM toolchain (pinned version)
-RUN wget -q https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz \
-    && tar xf arm-gnu-toolchain-*.tar.xz -C /opt/ \
-    && rm arm-gnu-toolchain-*.tar.xz
-ENV PATH="/opt/arm-gnu-toolchain-13.2.Rel1-x86_64-arm-none-eabi/bin:${PATH}"
-
-# Install nanopb
-RUN pip3 install --no-cache-dir nanopb==0.4.8
+# Handle UID collision (Ubuntu 24.04 has uid 1000 user)
+RUN useradd -m builder || true
+USER builder
+WORKDIR /workspace
 
 # Stage 2: Build
 FROM toolchain AS build
-COPY src/mcu/ /workspace/src/mcu/
-COPY docs/design/interface_specs/proto/ /workspace/src/proto/
-COPY CMakeLists.txt /workspace/
-WORKDIR /workspace/build
-RUN cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi.cmake \
-    -DBUILD_LINUX=OFF -DBUILD_MCU=ON \
-    && make -j$(nproc)
+COPY --chown=builder:builder . /workspace/
+RUN cmake -B build \
+    -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi.cmake \
+    -DBUILD_LINUX=OFF -DBUILD_MCU=ON -DBUILD_TESTS=OFF \
+    && cmake --build build
 
 # Stage 3: Export artifact
 FROM scratch AS artifact
-COPY --from=build /workspace/build/sentinel-mcu.elf /sentinel-mcu.elf
-COPY --from=build /workspace/build/sentinel-mcu.bin /sentinel-mcu.bin
+COPY --from=build /workspace/build/sentinel-mcu.elf /
+COPY --from=build /workspace/build/sentinel-mcu.bin /
 ```
 
 **CMake toolchain file** (`cmake/arm-none-eabi.cmake`):
@@ -382,50 +382,52 @@ volumes:
 
 ### 5.1 QEMU Launch Configuration
 
-**Linux Gateway VM** (`qemu-system-aarch64`):
+**IMPORTANT v2.0 UPDATE**: The original full system emulation approach was abandoned. We now use **QEMU user-mode emulation** for the MCU, which is simpler and more reliable for SIL testing.
+
+**Linux Gateway** (native x86_64, no QEMU needed for SIL):
 ```bash
-qemu-system-aarch64 \
-  -machine virt \
-  -cpu cortex-a53 \
-  -m 512M \
-  -kernel Image \
-  -drive file=rootfs.ext4,format=raw,if=virtio \
-  -append "root=/dev/vda rw console=ttyAMA0" \
-  -device usb-ehci \
-  -device usb-net,netdev=usb0 \
-  -netdev tap,id=usb0,ifname=tap-gw,script=no,downscript=no \
-  -serial mon:stdio \
-  -nographic \
-  -S -gdb tcp::1234   # Optional: GDB attach
+# Build and run natively
+cmake -B build -DBUILD_LINUX=ON
+cmake --build build
+./build/sentinel-gw
 ```
 
-**MCU VM** (`qemu-system-arm`):
+**MCU Firmware** (QEMU user-mode):
 ```bash
-qemu-system-arm \
-  -machine netduinoplus2 \
-  -cpu cortex-m4 \
-  -m 1M \
-  -kernel sentinel-mcu.elf \
-  -device usb-net,netdev=usb0 \
-  -netdev tap,id=usb0,ifname=tap-mcu,script=no,downscript=no \
-  -serial mon:stdio \
-  -nographic \
-  -S -gdb tcp::1235   # Optional: GDB attach
+# Build MCU as ARM Linux ELF (not bare-metal)
+cmake -B build-qemu \
+  -DBUILD_QEMU_MCU=ON \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/arm-linux-gnueabihf.cmake
+cmake --build build-qemu
+
+# Run via qemu-arm-static user-mode emulation
+export SENTINEL_MCU_HOST=127.0.0.1
+qemu-arm-static ./build-qemu/sentinel-mcu-qemu
 ```
 
-### 5.2 Virtual Network Bridge
+**Why User-Mode?**
+- No TAP/bridge networking needed (uses host loopback)
+- No lwIP integration needed (uses POSIX sockets)
+- No USB CDC-ECM emulation needed
+- Same application logic as bare-metal MCU
+
+See `docs/design/sil_environment.md` for complete SIL architecture details.
+
+### 5.2 Network Configuration (User-Mode)
+
+**No bridging required** — QEMU user-mode processes share host networking.
+
+Both processes use `127.0.0.1` (host loopback):
+- MCU listens on port 5000
+- Linux Gateway connects to 127.0.0.1:5000
+- Linux Gateway listens on ports 5001, 5002
 
 ```bash
-# Create bridge between the two QEMU TAP interfaces
-ip link add br-sentinel type bridge
-ip link set tap-gw master br-sentinel
-ip link set tap-mcu master br-sentinel
-ip link set br-sentinel up
-ip link set tap-gw up
-ip link set tap-mcu up
+# Environment variable for QEMU SIL
+export SENTINEL_MCU_HOST=127.0.0.1
 ```
 
-This simulates the USB CDC-ECM link as a virtual Ethernet bridge. Both VMs see each other at Layer 2 — same behavior as real USB Ethernet.
+**Note**: The USB CDC-ECM link (192.168.7.x) is NOT tested in SIL — requires real hardware.
 
 ### 5.3 SIL Test Harness
 

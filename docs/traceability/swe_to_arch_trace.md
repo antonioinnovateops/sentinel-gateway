@@ -2,8 +2,8 @@
 title: "SWE to Architecture Component Traceability"
 document_id: "TRACE-003"
 project: "Sentinel Gateway"
-version: "1.0.0"
-date: 2026-03-17
+version: "2.0.0"
+date: 2026-03-18
 status: "Approved"
 aspice_process: "SUP.8 Configuration Management"
 ---

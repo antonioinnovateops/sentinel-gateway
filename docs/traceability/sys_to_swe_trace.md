@@ -2,8 +2,8 @@
 title: "System → Software Requirements Traceability"
 document_id: "TRACE-002"
 project: "Sentinel Gateway"
-version: "1.0.0"
-date: 2026-03-17
+version: "2.0.0"
+date: 2026-03-18
 status: "Approved"
 aspice_process: "SWE.1 BP5 — Establish traceability"
 ---

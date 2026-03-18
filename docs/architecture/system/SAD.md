@@ -3,8 +3,8 @@ title: "System Architecture Document"
 document_id: "SAD-001"
 project: "Sentinel Gateway"
 system: "Sentinel Gateway Dual-Processor System"
-version: "1.0.0"
-date: 2026-03-17
+version: "2.0.0"
+date: 2026-03-18
 status: "Approved"
 asil_level: "ASIL-B (process rigor)"
 aspice_process: "SYS.3 System Architectural Design"
@@ -114,16 +114,38 @@ This architecture covers the complete Sentinel Gateway system operating in a QEM
 
 ### 3.4 SE-04: QEMU SIL Environment
 
-**Purpose**: Provide a fully emulated hardware environment for development and testing without physical hardware
+**Purpose**: Provide a fully emulated environment for development and testing without physical hardware
 
-**QEMU Instances**:
-1. **Linux VM**: `qemu-system-aarch64 -machine virt -cpu cortex-a53 -m 512M`
-2. **MCU VM**: `qemu-system-arm -machine netduinoplus2` (or custom STM32 machine)
+**IMPORTANT: Implementation Note (v2.0)**
+The original v1.0 design called for full system emulation (netduinoplus2 + virt machines with TAP bridging). This was abandoned in favor of **QEMU user-mode emulation** because:
+1. lwIP TCP stack on bare-metal MCU was too complex to integrate within time constraints
+2. QEMU USB CDC-ECM emulation is incomplete
+3. TAP/bridge setup requires root privileges, complicating CI/CD
 
-**Interconnection**: Virtual USB bridge using QEMU's `usb-net` device and TAP networking
-- Linux VM has USB host controller with virtual CDC-ECM device
-- MCU VM exposes USB device endpoint
-- Bridge via host TAP interface or QEMU socket transport
+**Implemented Architecture**:
+- **Linux Gateway**: Native x86_64 ELF (no QEMU needed for SIL)
+- **MCU Firmware**: ARM Linux ELF via `qemu-arm-static` user-mode emulation
+- **Network**: Direct host TCP (127.0.0.1) — no USB CDC-ECM emulation
+- **TCP Stack**: POSIX sockets (not lwIP)
+
+**Build Targets**:
+```bash
+# Linux gateway (native)
+cmake -DBUILD_LINUX=ON
+
+# MCU for QEMU user-mode (not bare-metal)
+cmake -DBUILD_QEMU_MCU=ON
+qemu-arm-static ./sentinel-mcu-qemu
+```
+
+**Trade-offs**:
+- ✓ Same application logic as real MCU (sensor/actuator/health modules)
+- ✓ Full TCP/wire frame testing
+- ✗ No USB enumeration testing (requires real hardware)
+- ✗ No lwIP stack testing (uses POSIX sockets)
+- ✗ No watchdog reset testing (QEMU user-mode has no watchdog)
+
+See `docs/design/sil_environment.md` for complete SIL architecture details.
 
 ---
 

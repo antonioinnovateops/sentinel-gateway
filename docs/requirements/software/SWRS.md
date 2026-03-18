@@ -2,8 +2,8 @@
 title: "Software Requirements Specification"
 document_id: "SWRS-001"
 project: "Sentinel Gateway"
-version: "1.0.0"
-date: 2026-03-17
+version: "2.0.0"
+date: 2026-03-18
 status: "Approved"
 asil_level: "ASIL-B (process rigor)"
 authors: ["AI Requirements Agent"]
@@ -31,14 +31,70 @@ This SWRS covers all software components on both the Linux gateway (SE-01) and M
 
 | Document ID | Title | Version |
 |-------------|-------|---------|
-| SRS-001 | System Requirements Specification | v1.0.0 |
-| SAD-001 | System Architecture Document | v1.0.0 |
-| STKH-REQ-001 | Stakeholder Requirements | v1.0.0 |
+| SRS-001 | System Requirements Specification | v2.0.0 |
+| SAD-001 | System Architecture Document | v2.0.0 |
+| STKH-REQ-001 | Stakeholder Requirements | v2.0.0 |
+| IFS-001 | Interface Specification | v2.0.0 |
 
-### 1.4 Naming Convention
+### 1.4 Implementation Files Reference
+
+| Component | Source Files |
+|-----------|-------------|
+| Wire Frame | `src/common/wire_frame.h`, `src/common/wire_frame.c` |
+| MCU TCP Stack | `src/mcu/tcp_stack_qemu.c` (QEMU), `src/mcu/tcp_stack_lwip.c` (HW) |
+| Linux Transport | `src/linux/tcp_transport.c` |
+| Diagnostics | `src/linux/diagnostics.c` |
+| Types/Errors | `src/common/sentinel_types.h`, `src/common/error_codes.h` |
+
+### 1.5 Naming Convention
 
 - **SWE-XXX-Y**: Software requirement derived from SYS-XXX, sub-requirement Y
 - **Component prefix**: Indicates target — `[MCU]` or `[LINUX]` or `[SHARED]`
+
+### 1.6 Wire Frame Format Quick Reference
+
+All TCP messages use this exact framing (from `wire_frame.h`):
+
+```
+Offset  Size   Field         Notes
+------  ----   -----         -----
+0       4      length        Little-endian uint32, payload size only (NOT including header)
+4       1      msg_type      Message type ID (see table below)
+5       N      payload       Protobuf-encoded message body
+```
+
+**Message Type IDs** (from `sentinel_types.h`):
+| ID | Name | Direction |
+|----|------|-----------|
+| 0x01 | MSG_SENSOR_DATA | MCU → Linux |
+| 0x02 | MSG_ACTUATOR_CMD | Linux → MCU |
+| 0x03 | MSG_ACTUATOR_RESP | MCU → Linux |
+| 0x04 | MSG_HEALTH_STATUS | MCU → Linux |
+| 0x05 | MSG_CONFIG_UPDATE | Linux → MCU |
+| 0x06 | MSG_CONFIG_RESP | MCU → Linux |
+| 0x07 | MSG_STATE_SYNC_REQ | Linux → MCU |
+| 0x08 | MSG_STATE_SYNC_RESP | MCU → Linux |
+| 0x09 | MSG_DIAG_REQ | Linux → MCU |
+| 0x0A | MSG_DIAG_RESP | MCU → Linux |
+
+### 1.7 Error Codes Quick Reference
+
+From `error_codes.h`:
+```c
+typedef enum {
+    SENTINEL_OK = 0,
+    SENTINEL_ERR_INVALID_PARAM = -1,
+    SENTINEL_ERR_OUT_OF_RANGE = -2,
+    SENTINEL_ERR_TIMEOUT = -3,
+    SENTINEL_ERR_COMM_FAILED = -4,
+    SENTINEL_ERR_PROTO_ERROR = -5,
+    SENTINEL_ERR_AUTH_FAILED = -6,
+    SENTINEL_ERR_RATE_LIMITED = -7,
+    SENTINEL_ERR_NOT_READY = -8,
+    SENTINEL_ERR_FRAME_TOO_LARGE = -9,
+    SENTINEL_ERR_UNKNOWN_MSG_TYPE = -10
+} sentinel_err_t;
+```
 
 ---
 
@@ -174,6 +230,7 @@ This SWRS covers all software components on both the Linux gateway (SE-01) and M
 - **Safety**: QM
 - **Source**: [SYS-008], [SYS-035]
 - **Component**: MCU / tcp_stack
+- **Implementation Note**: For QEMU SIL builds (`BUILD_QEMU_MCU=ON`), TCP is implemented via POSIX sockets in `tcp_stack_qemu.c`. For hardware builds, lwIP is used in `tcp_stack_lwip.c`.
 - **Acceptance Criteria**:
   - Message received on Linux port 5001
   - Framing header correctly parsed
@@ -392,8 +449,10 @@ This SWRS covers all software components on both the Linux gateway (SE-01) and M
 - **Safety**: QM
 - **Source**: [SYS-031]
 - **Component**: MCU / tcp_stack
+- **Implementation Note**: For QEMU SIL builds, the MCU connects to `127.0.0.1` (localhost) via POSIX sockets. The IP address can be overridden via the `SENTINEL_MCU_HOST` environment variable on the Linux side.
 - **Acceptance Criteria**:
-  - MCU responds to ICMP ping from 192.168.7.1
+  - MCU responds to ICMP ping from 192.168.7.1 (hardware)
+  - MCU connects to localhost (QEMU SIL)
 - **Verified By**: [TC-SWE-031-1-1]
 
 ### 4.2 TCP Server/Client
@@ -785,81 +844,98 @@ This SWRS covers all software components on both the Linux gateway (SE-01) and M
 ### 6.5 Diagnostics Server
 
 **[SWE-046-2] Diagnostic TCP Server**
-- **Description**: The Linux diagnostics module shall listen on TCP port 5002, accepting multiple concurrent connections (max 3), with line-delimited plain-text command/response protocol (CR+LF terminated)
+- **Description**: The Linux diagnostics module shall listen on TCP port 5002, accepting a single client connection at a time, with line-delimited plain-text command/response protocol (newline terminated)
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [SYS-046]
 - **Component**: LINUX / diagnostics
+- **Implementation Note**: The current epoll implementation uses a single-slot design for simplicity. Only one diagnostic client can connect at a time; subsequent connections are refused until the current client disconnects.
 - **Acceptance Criteria**:
   - Connection accepted on port 5002
   - Commands parsed line-by-line
-  - Multiple concurrent clients supported (up to 3)
-- **Verified By**: [TC-SWE-046-2-1]
+  - Second connection attempt refused while first client connected
+- **Verified By**: [TC-SWE-046-2-1, TC-SWE-046-2-2]
 
-**[SWE-047-1] READ_SENSOR Command**
-- **Description**: The diagnostics module shall handle `READ_SENSOR <channel_id>` by returning the latest cached sensor reading for the specified channel in format: `OK <channel_name> <calibrated_value> <unit> <timestamp>\r\n`
+**[SWE-047-1] sensor read Command**
+- **Description**: The diagnostics module shall handle `sensor read <channel_id>` by returning the latest cached sensor reading for the specified channel in format: `OK SENSOR <channel_id> <calibrated_value> <unit> <timestamp>\n`
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [SYS-047]
 - **Component**: LINUX / diagnostics
+- **Implementation Note**: Diagnostic commands are **lowercase only** and **case-sensitive**. The command `SENSOR READ` or `Sensor Read` will be rejected as unknown.
 - **Acceptance Criteria**:
-  - Valid channel (0-3) returns latest reading
-  - Invalid channel returns `ERROR INVALID_CHANNEL\r\n`
-- **Verified By**: [TC-SWE-047-1-1, TC-SWE-047-1-2]
+  - `sensor read 0` returns latest reading for channel 0
+  - `sensor read 5` returns `ERROR INVALID_CHANNEL\n`
+  - `SENSOR READ 0` returns `ERROR UNKNOWN_COMMAND\n` (case-sensitive!)
+- **Verified By**: [TC-SWE-047-1-1, TC-SWE-047-1-2, TC-SWE-047-1-3]
 
-**[SWE-048-1] SET_ACTUATOR Command**
-- **Description**: The diagnostics module shall handle `SET_ACTUATOR <actuator_id> <value>` by sending an ActuatorCommand to MCU and returning the response status
+**[SWE-048-1] actuator set Command**
+- **Description**: The diagnostics module shall handle `actuator set <actuator_id> <value>` by sending an ActuatorCommand to MCU and returning the response status
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [SYS-048]
 - **Component**: LINUX / diagnostics
+- **Implementation Note**: Command is lowercase only. Example: `actuator set 0 50`
 - **Acceptance Criteria**:
-  - Valid command returns `OK ACTUATOR <id> SET <applied_value>%\r\n`
-  - MCU error returned as `ERROR <status_code> <message>\r\n`
+  - `actuator set 0 50` returns `OK ACTUATOR 0 SET 50.0%\n`
+  - `actuator set 0 200` returns `ERROR OUT_OF_RANGE\n`
+  - `SET_ACTUATOR 0 50` returns `ERROR UNKNOWN_COMMAND\n`
 - **Verified By**: [TC-SWE-048-1-1, TC-SWE-048-1-2]
 
-**[SWE-049-1] GET_STATUS Command**
-- **Description**: The diagnostics module shall handle `GET_STATUS` by returning aggregated system status: comm state, MCU state, all sensor readings, all actuator states, uptime, watchdog reset count
+**[SWE-049-1] status Command**
+- **Description**: The diagnostics module shall handle `status` (lowercase) by returning aggregated system status: comm state, MCU state, all sensor readings, all actuator states, uptime, watchdog reset count
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [SYS-049]
 - **Component**: LINUX / diagnostics
+- **Implementation Note**: Command is lowercase only: `status`. The command `STATUS` or `get_status` will fail.
 - **Acceptance Criteria**:
   - All status fields present in response
   - Response formatted as multi-line text
 - **Verified By**: [TC-SWE-049-1-1]
 
-**[SWE-050-1] GET_VERSION Command**
-- **Description**: The diagnostics module shall handle `GET_VERSION` by returning Linux version (from build metadata) and MCU version (from last DiagnosticResponse)
+**[SWE-050-1] version Command**
+- **Description**: The diagnostics module shall handle `version` (lowercase) by returning Linux version (from build metadata) and MCU version (from last DiagnosticResponse)
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [SYS-050], [SYS-056], [SYS-057]
 - **Component**: LINUX / diagnostics
 - **Acceptance Criteria**:
-  - Both versions returned in format: `LINUX <version>\r\nMCU <version>\r\n`
+  - Both versions returned in format: `Linux: <version>\nMCU: <version>\n`
 - **Verified By**: [TC-SWE-050-1-1]
 
-**[SWE-051-1] RESET_MCU Command**
-- **Description**: The diagnostics module shall handle `RESET_MCU` by triggering USB power cycle recovery sequence (same as automatic recovery)
+**[SWE-051-1] reset mcu Command**
+- **Description**: The diagnostics module shall handle `reset mcu` (lowercase) by triggering USB power cycle recovery sequence (same as automatic recovery)
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [SYS-051]
 - **Component**: LINUX / diagnostics, LINUX / health_monitor
 - **Acceptance Criteria**:
   - MCU reset initiated
-  - Response: `OK MCU_RESET_INITIATED\r\n`
+  - Response: `OK MCU_RESET_INITIATED\n`
 - **Verified By**: [TC-SWE-051-1-1]
 
-**[SWE-054-1] GET_LOG Command**
-- **Description**: The diagnostics module shall handle `GET_LOG [count]` by returning the most recent `count` (default 50, max 500) log entries from the event log
+**[SWE-054-1] log Command**
+- **Description**: The diagnostics module shall handle `log [count]` (lowercase) by returning the most recent `count` (default 50, max 500) log entries from the event log
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [SYS-054]
 - **Component**: LINUX / diagnostics
 - **Acceptance Criteria**:
-  - Returns requested number of entries
+  - `log 10` returns last 10 entries
   - Entries in chronological order (newest last)
 - **Verified By**: [TC-SWE-054-1-1]
+
+**[SWE-054-2] help Command**
+- **Description**: The diagnostics module shall handle `help` (lowercase) by returning a list of available commands with brief descriptions
+- **Type**: Functional
+- **Safety**: QM
+- **Source**: [SYS-046]
+- **Component**: LINUX / diagnostics
+- **Acceptance Criteria**:
+  - Lists all available commands
+  - Shows usage syntax for each command
+- **Verified By**: [TC-SWE-054-2-1]
 
 ### 6.6 Event Logging
 
@@ -1037,7 +1113,30 @@ This SWRS covers all software components on both the Linux gateway (SE-01) and M
 
 ---
 
-## 10. Traceability
+## 10. Diagnostic Command Quick Reference
+
+**All commands are lowercase only and case-sensitive.**
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `status` | Show system state | `status` |
+| `sensor read <ch>` | Read sensor channel 0-3 | `sensor read 0` |
+| `actuator set <id> <val>` | Set actuator 0-1 to value % | `actuator set 0 50` |
+| `version` | Show Linux and MCU versions | `version` |
+| `log [count]` | Show last N log entries | `log 10` |
+| `config get` | Show current config | `config get` |
+| `config set <key> <val>` | Set config value | `config set channel0_rate 50` |
+| `reset mcu` | Trigger MCU reset | `reset mcu` |
+| `help` | Show command list | `help` |
+
+**Invalid Examples** (these will fail):
+- `STATUS` — uppercase not recognized
+- `GET_STATUS` — underscore format not recognized
+- `Sensor Read 0` — mixed case not recognized
+
+---
+
+## 11. Traceability
 
 Forward traceability to architecture components is maintained in `docs/traceability/swe_to_arch_trace.md`.
 Backward traceability to system requirements is maintained in `docs/traceability/sys_to_swe_trace.md`.

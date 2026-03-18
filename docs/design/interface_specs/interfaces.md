@@ -2,196 +2,546 @@
 title: "Interface Specifications"
 document_id: "IFS-001"
 project: "Sentinel Gateway"
-version: "1.0.0"
-date: 2026-03-17
+version: "2.0.0"
+date: 2026-03-18
 status: "Approved"
 aspice_process: "SWE.2 BP3 — Define interfaces"
 ---
 
 # Interface Specifications — Sentinel Gateway
 
-## 1. Shared Data Types
+## 1. Overview
 
-### 1.1 Common Types (shared between Linux and MCU)
+This document specifies all interfaces in the Sentinel Gateway system:
+1. Wire frame format (TCP message envelope)
+2. TCP port assignments and connection behavior
+3. Diagnostic command protocol
+4. HAL driver interfaces
+5. Data type definitions
 
-```c
-/* sentinel_types.h — shared type definitions */
+**Version 2.0 Note**: Updated with exact byte layouts, implementation references, and lessons learned from implementation.
 
-#include <stdint.h>
-#include <stdbool.h>
-
-/** Sensor channel enumeration */
-typedef enum {
-    SENSOR_CH_TEMPERATURE = 0U,
-    SENSOR_CH_HUMIDITY    = 1U,
-    SENSOR_CH_PRESSURE    = 2U,
-    SENSOR_CH_LIGHT       = 3U,
-    SENSOR_CH_COUNT       = 4U
-} sensor_channel_t;
-
-/** Actuator identification */
-typedef enum {
-    ACTUATOR_FAN   = 0U,
-    ACTUATOR_VALVE = 1U,
-    ACTUATOR_COUNT = 2U
-} actuator_id_t;
-
-/** MCU operational state */
-typedef enum {
-    MCU_STATE_INIT     = 0U,
-    MCU_STATE_NORMAL   = 1U,
-    MCU_STATE_DEGRADED = 2U,
-    MCU_STATE_FAILSAFE = 3U,
-    MCU_STATE_ERROR    = 4U
-} mcu_state_t;
-
-/** Communication link status */
-typedef enum {
-    COMM_CONNECTED    = 0U,
-    COMM_DEGRADED     = 1U,
-    COMM_DISCONNECTED = 2U
-} comm_status_t;
-
-/** Fail-safe cause codes */
-typedef enum {
-    FAILSAFE_NONE           = 0U,
-    FAILSAFE_COMM_LOSS      = 1U,
-    FAILSAFE_WATCHDOG       = 2U,
-    FAILSAFE_PROTO_ERROR    = 3U,
-    FAILSAFE_INTERNAL_ERROR = 4U
-} failsafe_cause_t;
-
-/** Log severity levels */
-typedef enum {
-    LOG_DEBUG    = 0U,
-    LOG_INFO     = 1U,
-    LOG_WARNING  = 2U,
-    LOG_ERROR    = 3U,
-    LOG_CRITICAL = 4U
-} log_level_t;
-
-/** Single sensor reading */
-typedef struct {
-    sensor_channel_t channel;
-    uint16_t raw_value;           /* 0-4095 (12-bit ADC) */
-    float calibrated_value;       /* Engineering units */
-    char unit[8];                 /* Unit string */
-    uint64_t timestamp_us;        /* Microseconds since boot */
-    uint32_t sequence_number;
-} sensor_reading_t;
-
-/** Actuator state */
-typedef struct {
-    actuator_id_t id;
-    float current_duty_percent;   /* 0.0-100.0% */
-    float target_duty_percent;    /* Last commanded value */
-    bool is_active;               /* False if fail-safe */
-} actuator_state_t;
-
-/** Per-channel sensor configuration */
-typedef struct {
-    sensor_channel_t channel;
-    uint32_t sample_rate_hz;      /* 1-100 Hz */
-    bool enabled;
-} sensor_config_t;
-
-/** Per-actuator safety limits */
-typedef struct {
-    actuator_id_t id;
-    float min_percent;            /* Minimum duty cycle */
-    float max_percent;            /* Maximum duty cycle */
-} actuator_limits_t;
-
-/** System configuration (persisted in flash) */
-typedef struct {
-    sensor_config_t sensors[SENSOR_CH_COUNT];
-    actuator_limits_t actuators[ACTUATOR_COUNT];
-    uint32_t auth_token;          /* Authentication token for safety changes */
-    uint32_t crc32;               /* CRC-32 of all fields above */
-} system_config_t;
-
-/** Wire frame message types */
-typedef enum {
-    MSG_TYPE_SENSOR_DATA       = 0x01U,
-    MSG_TYPE_HEALTH_STATUS     = 0x02U,
-    MSG_TYPE_ACTUATOR_COMMAND  = 0x10U,
-    MSG_TYPE_ACTUATOR_RESPONSE = 0x11U,
-    MSG_TYPE_CONFIG_UPDATE     = 0x20U,
-    MSG_TYPE_CONFIG_RESPONSE   = 0x21U,
-    MSG_TYPE_DIAG_REQUEST      = 0x30U,
-    MSG_TYPE_DIAG_RESPONSE     = 0x31U,
-    MSG_TYPE_SYNC_REQUEST      = 0x40U,
-    MSG_TYPE_SYNC_RESPONSE     = 0x41U
-} msg_type_t;
-
-/** Response status codes */
-typedef enum {
-    RESP_OK                    = 0U,
-    RESP_ERR_INVALID_ACTUATOR  = 1U,
-    RESP_ERR_OUT_OF_RANGE      = 2U,
-    RESP_ERR_RATE_LIMITED      = 3U,
-    RESP_ERR_AUTH_FAILED       = 4U,
-    RESP_ERR_FAILSAFE_ACTIVE   = 5U,
-    RESP_ERR_INTERNAL          = 6U
-} response_status_t;
-
-/** Error codes (function return values) */
-#define SENTINEL_OK              ( 0)
-#define SENTINEL_ERR_INVALID_ARG (-1)
-#define SENTINEL_ERR_TIMEOUT     (-2)
-#define SENTINEL_ERR_COMM        (-3)
-#define SENTINEL_ERR_DECODE      (-4)
-#define SENTINEL_ERR_AUTH        (-5)
-#define SENTINEL_ERR_RANGE       (-6)
-#define SENTINEL_ERR_RATE_LIMIT  (-7)
-#define SENTINEL_ERR_FLASH       (-8)
-#define SENTINEL_ERR_FAILSAFE    (-9)
-#define SENTINEL_ERR_INTERNAL    (-10)
-```
+---
 
 ## 2. Wire Frame Format
 
 ### 2.1 Frame Structure
-![Wire Frame Format](../../architecture/diagrams/wire_frame_format.drawio.svg)
 
-### 2.2 Maximum Frame Size
-- Maximum payload: 512 bytes
-- Maximum frame: 517 bytes (4 + 1 + 512)
-- MCU static buffers sized for this maximum
+Every message sent over TCP is wrapped in a wire frame. There is **no CRC in the wire frame** — TCP provides integrity via checksums.
+
+```
++--------+--------+--------+--------+--------+--------+--------+
+| Byte 0 | Byte 1 | Byte 2 | Byte 3 | Byte 4 | Byte 5 | ... N  |
++--------+--------+--------+--------+--------+--------+--------+
+|     payload_length (LE uint32)    |msg_type| payload[0..N]  |
++--------+--------+--------+--------+--------+--------+--------+
+```
+
+| Offset | Size | Field | Description |
+|--------|------|-------|-------------|
+| 0 | 4 | `payload_length` | Little-endian uint32. Number of payload bytes (not including header). |
+| 4 | 1 | `msg_type` | Message type identifier (0x01-0x41). |
+| 5 | N | `payload` | Application data. Max 507 bytes. |
+
+**Header Size**: `WIRE_FRAME_HEADER_SIZE = 5`
+**Max Payload**: `WIRE_FRAME_MAX_PAYLOAD = 507`
+**Max Frame**: `WIRE_FRAME_MAX_SIZE = 512`
+
+### 2.2 Implementation
+
+```c
+/* src/common/sentinel_types.h */
+#define WIRE_FRAME_HEADER_SIZE  5U
+#define WIRE_FRAME_MAX_PAYLOAD  507U
+#define WIRE_FRAME_MAX_SIZE     (WIRE_FRAME_HEADER_SIZE + WIRE_FRAME_MAX_PAYLOAD)
+
+/* src/common/wire_frame.h */
+sentinel_err_t wire_frame_encode(uint8_t msg_type,
+                                  const uint8_t *payload, size_t payload_len,
+                                  uint8_t *out_buf, size_t *out_len);
+
+sentinel_err_t wire_frame_decode_header(const uint8_t *buf, size_t buf_len,
+                                         uint8_t *msg_type, uint32_t *payload_len);
+```
+
+### 2.3 Message Types
+
+| ID | Constant | Direction | Description |
+|----|----------|-----------|-------------|
+| 0x01 | `MSG_TYPE_SENSOR_DATA` | MCU → Linux | Sensor readings (telemetry) |
+| 0x02 | `MSG_TYPE_HEALTH_STATUS` | MCU → Linux | Health heartbeat |
+| 0x10 | `MSG_TYPE_ACTUATOR_CMD` | Linux → MCU | Actuator command |
+| 0x11 | `MSG_TYPE_ACTUATOR_RSP` | MCU → Linux | Actuator response |
+| 0x20 | `MSG_TYPE_CONFIG_UPDATE` | Linux → MCU | Configuration change |
+| 0x21 | `MSG_TYPE_CONFIG_RSP` | MCU → Linux | Configuration response |
+| 0x30 | `MSG_TYPE_DIAG_REQ` | Linux → MCU | Diagnostic request |
+| 0x31 | `MSG_TYPE_DIAG_RSP` | MCU → Linux | Diagnostic response |
+| 0x40 | `MSG_TYPE_STATE_SYNC_REQ` | Linux → MCU | State sync request |
+| 0x41 | `MSG_TYPE_STATE_SYNC_RSP` | MCU → Linux | State sync response |
+
+### 2.4 Encoding Example
+
+Encoding a 3-byte payload with message type 0x01:
+```
+Input:  msg_type=0x01, payload=[0xAA, 0xBB, 0xCC], payload_len=3
+Output: [0x03, 0x00, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0xCC]
+         ^--- LE length=3 ----^  ^type^  ^-- payload --^
+```
+
+---
 
 ## 3. TCP Port Assignments
 
-| Port | Listener | Connector | Purpose | Max Clients |
-|------|----------|-----------|---------|-------------|
-| 5000 | MCU | Linux | Commands | 1 |
-| 5001 | Linux | MCU | Telemetry | 1 |
-| 5002 | Linux | External | Diagnostics | 3 |
+### 3.1 Port Configuration
 
-## 4. Diagnostic Command Protocol
+| Port | Constant | Listener | Connector | Purpose | Max Clients |
+|------|----------|----------|-----------|---------|-------------|
+| 5000 | `SENTINEL_PORT_COMMAND` | MCU | Linux | Commands/Responses | 1 |
+| 5001 | `SENTINEL_PORT_TELEMETRY` | Linux | MCU | Sensor/Health telemetry | 1 |
+| 5002 | `SENTINEL_PORT_DIAG` | Linux | External | Diagnostic interface | 1 |
 
-### 4.1 Format
-- Client sends: `COMMAND [arg1] [arg2]\r\n`
-- Server responds: `OK [data]\r\n` or `ERROR [code] [message]\r\n`
-- Multi-line responses end with `END\r\n`
+**Environment Variable Overrides**:
+- `SENTINEL_MCU_HOST`: MCU IP address (default: `192.168.7.2`, use `127.0.0.1` for QEMU SIL)
+- `SENTINEL_LINUX_HOST`: Linux IP address (default: `192.168.7.1`)
 
-### 4.2 Command Reference
+### 3.2 Connection Behavior
+
+**Port 5000 (Command)**:
+- MCU listens, Linux connects
+- Single connection; new connection replaces existing
+- Messages: ActuatorCommand, ConfigUpdate, DiagnosticRequest (Linux → MCU)
+- Messages: ActuatorResponse, ConfigResponse, DiagnosticResponse (MCU → Linux)
+
+**Port 5001 (Telemetry)**:
+- Linux listens, MCU connects
+- Single connection; reconnects on failure with exponential backoff
+- Messages: SensorData, HealthStatus (MCU → Linux only)
+
+**Port 5002 (Diagnostics)**:
+- Linux listens, external clients connect
+- Single connection; new connection drops existing (**not multi-client**)
+- Plain-text protocol (not wire frame)
+
+### 3.3 Reconnection Behavior
+
+On TCP connection loss:
+1. Initial delay: 100 ms
+2. Double delay each attempt: 100, 200, 400, 800, 1600, 3200, 5000 ms
+3. Maximum delay: 5000 ms (cap)
+4. Infinite retries (no limit on MCU; Linux has 3 recovery attempts)
+
+```c
+/* Exponential backoff pseudocode */
+delay_ms = 100;
+while (!connected) {
+    attempt_connect();
+    if (!connected) {
+        sleep_ms(delay_ms);
+        delay_ms = min(delay_ms * 2, 5000);
+    }
+}
+```
+
+---
+
+## 4. Shared Data Types
+
+### 4.1 Header File
+
+All types defined in `src/common/sentinel_types.h`:
+
+```c
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+#include "error_codes.h"
+
+/* Maximum channels/actuators */
+#define SENTINEL_MAX_CHANNELS   4U
+#define SENTINEL_MAX_ACTUATORS  2U
+
+/* TCP ports */
+#define SENTINEL_PORT_COMMAND    5000U
+#define SENTINEL_PORT_TELEMETRY  5001U
+#define SENTINEL_PORT_DIAG       5002U
+
+/* Default IP addresses */
+#define SENTINEL_LINUX_IP  "192.168.7.1"
+#define SENTINEL_MCU_IP    "192.168.7.2"
+
+/* Timing constants */
+#define SENTINEL_HEALTH_INTERVAL_MS   1000U
+#define SENTINEL_COMM_TIMEOUT_MS      3000U
+#define SENTINEL_WATCHDOG_TIMEOUT_MS  2000U
+#define SENTINEL_ACT_RESPONSE_TIMEOUT_MS 500U
+
+/* Protocol version */
+#define SENTINEL_PROTO_VERSION_MAJOR  1U
+#define SENTINEL_PROTO_VERSION_MINOR  0U
+```
+
+### 4.2 Sensor Reading Structure
+
+```c
+typedef struct {
+    uint8_t  channel;           /* 0-3 */
+    uint32_t raw_value;         /* 0-4095 (12-bit ADC) */
+    float    calibrated_value;  /* Engineering units */
+    uint64_t timestamp_ms;      /* Milliseconds since boot */
+} sensor_reading_t;
+```
+
+### 4.3 Actuator State Structure
+
+```c
+typedef struct {
+    uint8_t  actuator_id;           /* 0=Fan, 1=Valve */
+    float    commanded_percent;     /* What was requested */
+    float    applied_percent;       /* What was actually applied (after clamping) */
+    uint32_t status;                /* SENTINEL_OK or error code */
+    uint64_t command_timestamp_ms;
+    uint64_t response_timestamp_ms;
+} actuator_state_t;
+```
+
+### 4.4 System Configuration Structure
+
+```c
+typedef struct {
+    uint32_t sensor_rates_hz[SENTINEL_MAX_CHANNELS];    /* 1-100 Hz per channel */
+    float    actuator_min_percent[SENTINEL_MAX_ACTUATORS];
+    float    actuator_max_percent[SENTINEL_MAX_ACTUATORS];
+    uint32_t heartbeat_interval_ms;
+    uint32_t comm_timeout_ms;
+} system_config_t;
+```
+
+### 4.5 System State Enumeration
+
+```c
+typedef enum {
+    STATE_INIT     = 0,  /* Starting up */
+    STATE_NORMAL   = 1,  /* Normal operation */
+    STATE_DEGRADED = 2,  /* Communication issues detected */
+    STATE_FAILSAFE = 3,  /* Safe state (actuators at 0%) */
+    STATE_ERROR    = 4   /* Fatal error, requires restart */
+} system_state_t;
+```
+
+### 4.6 Fault IDs
+
+```c
+typedef enum {
+    FAULT_NONE             = 0,
+    FAULT_COMM_LOSS        = 1,  /* No messages from peer for timeout period */
+    FAULT_ACTUATOR_READBACK = 2, /* PWM register readback mismatch */
+    FAULT_ADC_TIMEOUT      = 3,  /* ADC conversion timeout */
+    FAULT_FLASH_CRC        = 4,  /* Config CRC mismatch */
+    FAULT_STACK_OVERFLOW   = 5   /* Stack canary triggered */
+} fault_id_t;
+```
+
+---
+
+## 5. Error Codes
+
+Defined in `src/common/error_codes.h`:
+
+```c
+typedef enum {
+    SENTINEL_OK              =   0,  /* Success */
+    SENTINEL_ERR_INVALID_ARG =  -1,  /* NULL pointer, invalid ID */
+    SENTINEL_ERR_OUT_OF_RANGE = -2,  /* Value exceeds limits */
+    SENTINEL_ERR_TIMEOUT     =  -3,  /* Operation timed out */
+    SENTINEL_ERR_COMM        =  -4,  /* Communication failure */
+    SENTINEL_ERR_DECODE      =  -5,  /* Wire frame/protobuf decode error */
+    SENTINEL_ERR_ENCODE      =  -6,  /* Encode error */
+    SENTINEL_ERR_FULL        =  -7,  /* Buffer full, rate limited */
+    SENTINEL_ERR_NOT_READY   =  -8,  /* Module not initialized */
+    SENTINEL_ERR_AUTH        =  -9,  /* Authentication failed (reserved) */
+    SENTINEL_ERR_INTERNAL    = -10   /* Internal error */
+} sentinel_err_t;
+```
+
+---
+
+## 6. Diagnostic Command Protocol
+
+### 6.1 Protocol Overview
+
+- **Transport**: TCP port 5002, plain text
+- **Command format**: `command [arg1] [arg2]\n` (newline-terminated)
+- **Response format**: Depends on command (see below)
+- **Case sensitivity**: Commands are **lowercase only** (case-sensitive)
+
+### 6.2 Command Reference
 
 | Command | Arguments | Response | Example |
 |---------|-----------|----------|---------|
-| `READ_SENSOR` | `<channel_id:0-3>` | `OK <name> <value> <unit> <timestamp>` | `READ_SENSOR 0` → `OK TEMPERATURE 23.5 °C 1710672000000` |
-| `SET_ACTUATOR` | `<actuator_id:0-1> <percent:0-100>` | `OK ACTUATOR <id> SET <applied>%` | `SET_ACTUATOR 0 50` → `OK ACTUATOR 0 SET 50.0%` |
-| `GET_STATUS` | (none) | Multi-line status dump | `GET_STATUS` → `COMM: CONNECTED\nMCU: NORMAL\n...END` |
-| `GET_VERSION` | (none) | `LINUX <ver>\nMCU <ver>` | `GET_VERSION` → `LINUX 1.0.0-abc123\nMCU 1.0.0-def456\nEND` |
-| `GET_LOG` | `[count:1-500]` | Multi-line log entries | `GET_LOG 10` → `2026-03-17T10:00:00 INFO ...\n...END` |
-| `GET_CONFIG` | (none) | Multi-line config dump | `GET_CONFIG` → `CH0: 10Hz enabled\n...END` |
-| `RESET_MCU` | (none) | `OK MCU_RESET_INITIATED` | `RESET_MCU` → `OK MCU_RESET_INITIATED` |
-| `HELP` | (none) | Command list | `HELP` → `Available commands:\n...END` |
+| `status` | (none) | `state=<STATE> uptime=<N>s wd_resets=<N> comm=<OK\|LOST>` | `status` → `state=NORMAL uptime=123s wd_resets=0 comm=OK` |
+| `sensor read` | `<ch:0-3>` | `ch=<N> raw=<N> cal=<F>` | `sensor read 0` → `ch=0 raw=2048 cal=42.500` |
+| `actuator set` | `<id:0-1> <pct:0-100>` | `OK` or `ERROR` | `actuator set 0 50.0` → `OK` |
+| `version` | (none) | `linux=<VER> mcu=<VER>` | `version` → `linux=1.0.0 mcu=pending` |
+| `help` | (none) | Command list | `help` → `Commands: status, sensor read <ch>, ...` |
 
-## 5. Calibration Formulae
+### 6.3 Error Responses
 
-| Channel | Raw → Engineering | Inverse |
-|---------|-------------------|---------|
-| Temperature | T = (raw/4095 × 3.3/3.3) × 165.0 - 40.0 °C | raw = (T + 40.0) / 165.0 × 4095 |
-| Humidity | RH = raw/4095 × 100.0 % | raw = RH / 100.0 × 4095 |
-| Pressure | P = 300.0 + raw/4095 × 800.0 hPa | raw = (P - 300.0) / 800.0 × 4095 |
-| Light | L = raw/4095 × 100000.0 lux | raw = L / 100000.0 × 4095 |
+| Error | Response |
+|-------|----------|
+| Unknown command | `ERROR: unknown command` |
+| Invalid channel | `ERROR: invalid channel` |
+| Invalid syntax | `ERROR: usage: <correct_syntax>` |
+| MCU error | `ERROR` (generic for actuator failures) |
+
+### 6.4 Implementation
+
+```c
+/* src/linux/diagnostics.c */
+sentinel_err_t diagnostics_process_command(const char *cmd,
+                                            char *response,
+                                            size_t response_size);
+```
+
+**Important**: Commands use `strncmp()` for prefix matching:
+- `"sensor read "` (with trailing space) matches commands starting with `sensor read `
+- Channel is parsed as `cmd[12] - '0'` (single digit)
+
+---
+
+## 7. HAL Driver Interfaces
+
+### 7.1 ADC Driver
+
+```c
+/* src/mcu/hal/adc_driver.h */
+#define ADC_MAX_CHANNELS  4U
+#define ADC_RESOLUTION    4095U  /* 12-bit: 0-4095 */
+
+sentinel_err_t adc_init(void);
+sentinel_err_t adc_read_channel(uint8_t channel, uint32_t *value);
+sentinel_err_t adc_scan_all(uint32_t values[ADC_MAX_CHANNELS]);
+```
+
+**QEMU Implementation**: `src/mcu/hal/qemu/hal_shim_posix.c`
+- Returns simulated values with slight drift
+- Base values: `{2048, 1024, 3000, 500}` for channels 0-3
+
+### 7.2 PWM Driver
+
+```c
+/* src/mcu/hal/pwm_driver.h */
+#define PWM_MAX_CHANNELS 2U
+#define PWM_ARR_VALUE    999U  /* 0-999 for 0.0%-100.0% (0.1% resolution) */
+
+sentinel_err_t pwm_init(void);
+sentinel_err_t pwm_set_duty(uint8_t channel, float percent);
+sentinel_err_t pwm_get_duty(uint8_t channel, float *percent);
+sentinel_err_t pwm_set_all_zero(void);
+```
+
+**Duty Cycle Calculation**:
+```c
+uint32_t compare = (uint32_t)((percent / 100.0f) * PWM_ARR_VALUE);
+/* 0% → compare=0, 100% → compare=999 */
+```
+
+### 7.3 Watchdog Driver
+
+```c
+/* src/mcu/hal/watchdog_driver.h */
+sentinel_err_t iwdg_init(uint32_t timeout_ms);
+void iwdg_feed(void);
+bool iwdg_was_reset_cause(void);
+```
+
+**QEMU Implementation**: No-op (QEMU user-mode has no watchdog)
+
+### 7.4 Flash Driver
+
+```c
+/* src/mcu/hal/flash_driver.h */
+#define FLASH_CONFIG_ADDR   0x08030000UL
+#define FLASH_CONFIG_SIZE   4096U  /* 4 KB sector */
+#define FLASH_PAGE_SIZE     4096U
+
+sentinel_err_t flash_init(void);
+sentinel_err_t flash_erase_page(uint32_t addr);
+sentinel_err_t flash_write(uint32_t addr, const uint8_t *data, size_t len);
+sentinel_err_t flash_read(uint32_t addr, uint8_t *data, size_t len);
+```
+
+**QEMU Implementation**: RAM-backed array (not persistent across runs)
+
+### 7.5 GPIO Driver
+
+```c
+/* src/mcu/hal/gpio_driver.h */
+sentinel_err_t gpio_init(void);
+void gpio_led_set(bool on);
+void gpio_led_toggle(void);
+```
+
+---
+
+## 8. Calibration Formulae
+
+### 8.1 ADC to Engineering Units
+
+All channels use 12-bit ADC (0-4095) with 3.3V reference.
+
+| Channel | Sensor | Formula | Unit | Range |
+|---------|--------|---------|------|-------|
+| 0 | Temperature | `T = (raw / 4095.0) * 165.0 - 40.0` | °C | -40 to +125 |
+| 1 | Humidity | `RH = (raw / 4095.0) * 100.0` | % | 0 to 100 |
+| 2 | Pressure | `P = 300.0 + (raw / 4095.0) * 800.0` | hPa | 300 to 1100 |
+| 3 | Light | `L = (raw / 4095.0) * 100000.0` | lux | 0 to 100000 |
+
+### 8.2 Reference Values
+
+| Channel | Raw 0 | Raw 2048 | Raw 4095 |
+|---------|-------|----------|----------|
+| Temperature | -40.0°C | 42.5°C | 125.0°C |
+| Humidity | 0% | 50% | 100% |
+| Pressure | 300 hPa | 700 hPa | 1100 hPa |
+| Light | 0 lux | 50000 lux | 100000 lux |
+
+### 8.3 Implementation
+
+```c
+/* src/mcu/sensor_acquisition.c */
+static float calibrate_temperature(uint32_t raw) {
+    return (((float)raw / 4095.0f) * 165.0f) - 40.0f;
+}
+
+static float calibrate_humidity(uint32_t raw) {
+    return ((float)raw / 4095.0f) * 100.0f;
+}
+
+static float calibrate_pressure(uint32_t raw) {
+    return 300.0f + (((float)raw / 4095.0f) * 800.0f);
+}
+
+static float calibrate_light(uint32_t raw) {
+    return ((float)raw / 4095.0f) * 100000.0f;
+}
+```
+
+---
+
+## 9. Message Payloads
+
+### 9.1 Sensor Data Payload
+
+Sent via `MSG_TYPE_SENSOR_DATA` (0x01):
+
+```c
+typedef struct {
+    uint8_t  channel;
+    uint32_t raw_value;
+    float    calibrated_value;
+    uint64_t timestamp_ms;
+} sensor_data_payload_t;
+```
+
+**Byte Layout** (packed, little-endian):
+```
+Offset  Size  Field
+------  ----  -----
+0       1     channel
+1       4     raw_value (LE)
+5       4     calibrated_value (IEEE 754 float, LE)
+9       8     timestamp_ms (LE)
+------  ----  -----
+Total: 17 bytes per sensor reading
+```
+
+### 9.2 Health Status Payload
+
+Sent via `MSG_TYPE_HEALTH_STATUS` (0x02):
+
+```c
+typedef struct {
+    uint8_t  state;            /* system_state_t */
+    uint32_t uptime_s;
+    uint32_t watchdog_resets;
+    uint8_t  comm_ok;          /* bool */
+} health_status_payload_t;
+```
+
+### 9.3 Actuator Command Payload
+
+Sent via `MSG_TYPE_ACTUATOR_CMD` (0x10):
+
+```c
+typedef struct {
+    uint8_t actuator_id;
+    float   commanded_percent;
+} actuator_cmd_payload_t;
+```
+
+### 9.4 Actuator Response Payload
+
+Sent via `MSG_TYPE_ACTUATOR_RSP` (0x11):
+
+```c
+typedef struct {
+    uint8_t  actuator_id;
+    float    applied_percent;  /* After clamping */
+    int32_t  status;           /* sentinel_err_t */
+} actuator_rsp_payload_t;
+```
+
+---
+
+## 10. Unit Test Stubs
+
+For unit testing on host (x86), HAL drivers are stubbed:
+
+### 10.1 PWM Stub
+
+```c
+/* tests/unit/stubs/pwm_driver_stub.c */
+static float g_pwm_duty[PWM_MAX_CHANNELS] = {0};
+
+sentinel_err_t pwm_set_duty(uint8_t channel, float percent) {
+    if (channel >= PWM_MAX_CHANNELS) return SENTINEL_ERR_INVALID_ARG;
+    if (percent < 0.0f || percent > 100.0f) return SENTINEL_ERR_OUT_OF_RANGE;
+    g_pwm_duty[channel] = percent;
+    return SENTINEL_OK;
+}
+```
+
+### 10.2 ADC Stub
+
+```c
+/* tests/unit/stubs/adc_stub.c */
+static uint32_t g_adc_values[ADC_MAX_CHANNELS] = {2048, 2048, 2048, 2048};
+
+sentinel_err_t adc_read_channel(uint8_t channel, uint32_t *value) {
+    if (channel >= ADC_MAX_CHANNELS || value == NULL) {
+        return SENTINEL_ERR_INVALID_ARG;
+    }
+    *value = g_adc_values[channel];
+    return SENTINEL_OK;
+}
+
+/* Test helper to inject values */
+void stub_adc_set_value(uint8_t channel, uint32_t value) {
+    g_adc_values[channel] = value;
+}
+```
+
+---
+
+## 11. Traceability
+
+| Requirement | Interface Element |
+|-------------|-------------------|
+| SYS-034, SYS-035 | Wire frame format (Section 2) |
+| SYS-032, SYS-033 | TCP port assignments (Section 3) |
+| SYS-046-SYS-051 | Diagnostic protocol (Section 6) |
+| SYS-001-SYS-006 | ADC driver (Section 7.1) |
+| SYS-016, SYS-017 | PWM driver (Section 7.2) |
+| SYS-069, SYS-070 | Watchdog driver (Section 7.3) |
+| SYS-060, SYS-065 | Flash driver (Section 7.4) |
+| SYS-002-SYS-005 | Calibration formulae (Section 8) |

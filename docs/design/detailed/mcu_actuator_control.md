@@ -2,13 +2,14 @@
 title: "Detailed Design — MCU Actuator Control"
 document_id: "DD-MCU-002"
 project: "Sentinel Gateway"
-version: "1.0.0"
-date: 2026-03-17
+version: "2.0.0"
+date: 2026-03-18
 status: "Approved"
 aspice_process: "SWE.3 Software Detailed Design"
 component: "MCU / actuator_control"
 requirements: ["SWE-016-1", "SWE-016-2", "SWE-017-1", "SWE-018-1", "SWE-019-1", "SWE-021-1", "SWE-022-1", "SWE-022-2", "SWE-023-1", "SWE-024-1", "SWE-026-1", "SWE-027-1", "SWE-028-1", "SWE-029-1"]
 safety_class: "ASIL-B"
+implementation: "src/mcu/actuator_control.c"
 ---
 
 # Detailed Design — MCU Actuator Control

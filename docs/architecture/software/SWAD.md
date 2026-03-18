@@ -2,8 +2,8 @@
 title: "Software Architecture Document"
 document_id: "SWAD-001"
 project: "Sentinel Gateway"
-version: "1.0.0"
-date: 2026-03-17
+version: "2.0.0"
+date: 2026-03-18
 status: "Approved"
 asil_level: "ASIL-B (process rigor)"
 aspice_process: "SWE.2 Software Architectural Design"
@@ -74,8 +74,11 @@ This document defines the software architecture for both the Linux gateway appli
 #### 2.2.5 tcp_stack
 - **Purpose**: Manage TCP connections and wire frame encoding/decoding
 - **Requirements**: SWE-030-1 to SWE-035-2, SWE-043-2
-- **Dependencies**: usb_cdc (for network interface), lwIP (TCP/IP stack)
-- **Pattern**: Polling mode (lwIP NO_SYS), called from main loop
+- **Implementation Note (v2.0)**:
+  - **Bare-metal** (`tcp_stack.c`): lwIP-based, stubbed in v1.0
+  - **QEMU user-mode** (`tcp_stack_qemu.c`): POSIX sockets, fully functional
+- **Dependencies**: For QEMU: POSIX sockets; For bare-metal: usb_cdc + lwIP (TODO)
+- **Pattern**: Non-blocking with select() (QEMU) or lwIP NO_SYS polling (bare-metal)
 
 #### 2.2.6 config_store
 - **Purpose**: Persist and manage runtime configuration in flash
@@ -179,29 +182,39 @@ This document defines the software architecture for both the Linux gateway appli
 
 #### IF-MCU-01: adc_driver API
 ```c
-/** Initialize ADC1 for 4-channel scan mode with DMA */
-int32_t adc_driver_init(void);
+/* src/mcu/hal/adc_driver.h */
 
-/** Start a single ADC scan (non-blocking, DMA-driven) */
-int32_t adc_driver_start_scan(void);
+#define ADC_MAX_CHANNELS  4U
+#define ADC_RESOLUTION    4095U  /* 12-bit */
 
-/** Check if scan is complete (poll from main loop) */
-bool adc_driver_scan_complete(void);
+/** Initialize ADC peripheral */
+sentinel_err_t adc_init(void);
 
-/** Get raw ADC values for all 4 channels */
-int32_t adc_driver_get_raw(uint16_t raw_values[4]);
+/** Read single channel */
+sentinel_err_t adc_read_channel(uint8_t channel, uint32_t *value);
+
+/** Read all 4 channels at once */
+sentinel_err_t adc_scan_all(uint32_t values[ADC_MAX_CHANNELS]);
 ```
 
 #### IF-MCU-02: pwm_driver API
 ```c
-/** Initialize TIM2 CH1 and CH2 for 25 kHz PWM */
-int32_t pwm_driver_init(void);
+/* src/mcu/hal/pwm_driver.h */
 
-/** Set duty cycle for specified channel (0.0 - 100.0%) */
-int32_t pwm_driver_set_duty(uint8_t channel, float duty_percent);
+#define PWM_MAX_CHANNELS 2U
+#define PWM_ARR_VALUE    999U  /* 0-999 for 0.0-100.0% (0.1% resolution) */
 
-/** Read back current duty cycle for verification */
-int32_t pwm_driver_get_duty(uint8_t channel, float *duty_percent);
+/** Initialize PWM peripheral */
+sentinel_err_t pwm_init(void);
+
+/** Set duty cycle (0.0-100.0%) */
+sentinel_err_t pwm_set_duty(uint8_t channel, float percent);
+
+/** Read back duty cycle for verification */
+sentinel_err_t pwm_get_duty(uint8_t channel, float *percent);
+
+/** Set all channels to 0% (fail-safe) */
+sentinel_err_t pwm_set_all_zero(void);
 ```
 
 #### IF-MCU-03: sensor_acquisition API
@@ -381,17 +394,20 @@ int32_t diag_process_events(void);
 
 ### 6.3 Error Code Convention
 ```c
-#define SENTINEL_OK              (0)
-#define SENTINEL_ERR_INVALID_ARG (-1)
-#define SENTINEL_ERR_TIMEOUT     (-2)
-#define SENTINEL_ERR_COMM        (-3)
-#define SENTINEL_ERR_DECODE      (-4)
-#define SENTINEL_ERR_AUTH        (-5)
-#define SENTINEL_ERR_RANGE       (-6)
-#define SENTINEL_ERR_RATE_LIMIT  (-7)
-#define SENTINEL_ERR_FLASH       (-8)
-#define SENTINEL_ERR_FAILSAFE    (-9)
-#define SENTINEL_ERR_INTERNAL    (-10)
+/* src/common/error_codes.h */
+typedef enum {
+    SENTINEL_OK              =   0,
+    SENTINEL_ERR_INVALID_ARG =  -1,
+    SENTINEL_ERR_OUT_OF_RANGE = -2,
+    SENTINEL_ERR_TIMEOUT     =  -3,
+    SENTINEL_ERR_COMM        =  -4,
+    SENTINEL_ERR_DECODE      =  -5,
+    SENTINEL_ERR_ENCODE      =  -6,
+    SENTINEL_ERR_FULL        =  -7,  /* Rate limited */
+    SENTINEL_ERR_NOT_READY   =  -8,
+    SENTINEL_ERR_AUTH        =  -9,
+    SENTINEL_ERR_INTERNAL    = -10
+} sentinel_err_t;
 ```
 
 ---

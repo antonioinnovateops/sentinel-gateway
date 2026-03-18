@@ -2,8 +2,8 @@
 title: "Stakeholder → System Requirements Traceability"
 document_id: "TRACE-001"
 project: "Sentinel Gateway"
-version: "1.0.0"
-date: 2026-03-17
+version: "2.0.0"
+date: 2026-03-18
 status: "Approved"
 aspice_process: "SYS.2 BP5 — Establish traceability"
 ---
