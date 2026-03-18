@@ -1,37 +1,31 @@
 # Dockerfile for QEMU-based Software-in-the-Loop testing
 #
-# Runs actual cross-compiled binaries in QEMU emulation:
-# - MCU firmware (Cortex-M33) in qemu-system-arm -M mps2-an505
-# - Linux gateway (aarch64) in qemu-aarch64-static user-mode
+# Runs actual cross-compiled binaries in QEMU user-mode emulation:
+# - MCU firmware (ARM32 Linux ELF) via qemu-arm-static
+# - Linux gateway (native x86_64 or aarch64 via qemu-aarch64-static)
 #
-# This provides higher fidelity testing than the pure x86 SIL
-# simulation by actually running the ARM machine code.
+# The MCU firmware uses POSIX sockets for TCP, so it runs as a regular
+# Linux process with host networking - no port forwarding needed.
 
 FROM ubuntu:24.04
 
 # Install QEMU and dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # QEMU system emulation (for MCU)
-    qemu-system-arm \
-    # QEMU user-mode emulation (for aarch64 gateway)
+    # QEMU user-mode emulation (for ARM binaries)
     qemu-user-static \
     binfmt-support \
     # Network utilities
-    bridge-utils \
     iproute2 \
     iputils-ping \
     net-tools \
-    socat \
     # Python test framework
     python3 \
     python3-pip \
     python3-venv \
     # Debugging tools
-    gdb-multiarch \
     strace \
     file \
     # Misc
-    screen \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
@@ -45,8 +39,7 @@ RUN pip3 install --no-cache-dir --break-system-packages \
 # Create non-root user
 RUN useradd -m builder || true
 
-# Set up binfmt for aarch64 (if not already configured by host)
-# This allows transparent execution of aarch64 binaries
+# Set up binfmt for ARM (if not already configured by host)
 RUN update-binfmts --display || true
 
 USER builder
@@ -56,7 +49,6 @@ WORKDIR /workspace
 # ./build/linux/        -> /workspace/artifacts/linux/
 # ./build/qemu-mcu/     -> /workspace/artifacts/mcu-qemu/
 # ./tests/              -> /workspace/tests/
-# ./tools/qemu/         -> /workspace/qemu/
 # ./results/qemu-sil/   -> /workspace/results/
 
 # Environment for test discovery

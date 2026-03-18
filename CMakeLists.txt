@@ -135,26 +135,28 @@ if(BUILD_MCU)
 endif()
 
 # ============================================
-# MCU Firmware for QEMU MPS2-AN505 (sentinel-mcu-qemu)
+# MCU Firmware for QEMU User-Mode (sentinel-mcu-qemu)
+#
+# This builds an ARM Linux ELF that runs under qemu-arm-static (user-mode).
+# Uses POSIX sockets for TCP (no lwIP needed) and pure-software HAL shims.
+# Same MCU application logic (sensor, actuator, health, safety) as real MCU.
 # ============================================
 if(BUILD_QEMU_MCU)
     set(MCU_QEMU_SOURCES
-        src/mcu/main.c
+        # Main entry point for QEMU user-mode (uses POSIX signals, usleep)
+        src/mcu/hal/qemu/main_qemu.c
+        # Application logic (same as real MCU)
         src/mcu/sensor_acquisition.c
         src/mcu/actuator_control.c
         src/mcu/protobuf_handler.c
-        src/mcu/tcp_stack.c
         src/mcu/watchdog_mgr.c
         src/mcu/config_store.c
         src/mcu/health_reporter.c
-        src/mcu/startup_mps2_an505.s
-        src/mcu/hal/qemu/qemu_hal_shim.c
-        src/mcu/hal/qemu/adc_driver_qemu.c
-        src/mcu/hal/qemu/pwm_driver_qemu.c
-        src/mcu/hal/qemu/flash_driver_qemu.c
-        src/mcu/hal/qemu/watchdog_driver_qemu.c
-        src/mcu/hal/qemu/gpio_driver_qemu.c
-        src/mcu/hal/qemu/systick_qemu.c
+        # TCP stack using POSIX sockets (not lwIP)
+        src/mcu/tcp_stack_qemu.c
+        # POSIX HAL shims (pure software, no hardware access)
+        src/mcu/hal/qemu/hal_shim_posix.c
+        # Common wire frame handling
         ${COMMON_SOURCES}
     )
 
@@ -163,10 +165,9 @@ if(BUILD_QEMU_MCU)
     target_compile_definitions(sentinel-mcu-qemu PRIVATE
         SENTINEL_PLATFORM_MCU=1
         SENTINEL_PLATFORM_QEMU=1
+        SENTINEL_QEMU_USERMODE=1
         SENTINEL_VERSION="${PROJECT_VERSION}"
-        MPS2_AN505=1
-        __HEAP_SIZE=0
-        _REENT_SMALL=1
+        _POSIX_C_SOURCE=200809L
         PB_NO_ERRMSG=1
         PB_BUFFER_ONLY=1
     )
@@ -178,18 +179,16 @@ if(BUILD_QEMU_MCU)
         src/mcu/hal/qemu
     )
 
-    # Linker script for MPS2-AN505
-    set(QEMU_LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/src/mcu/mps2_an505.ld)
+    # No linker script needed for user-mode Linux ELF
+    # Static linking for portability in Docker
     target_link_options(sentinel-mcu-qemu PRIVATE
-        -T${QEMU_LINKER_SCRIPT}
         -Wl,-Map=${CMAKE_BINARY_DIR}/sentinel-mcu-qemu.map
     )
 
-    # Post-build: generate .bin and size report
+    # Post-build: size report (no .bin needed for Linux ELF)
     add_custom_command(TARGET sentinel-mcu-qemu POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY} -O binary sentinel-mcu-qemu sentinel-mcu-qemu.bin
-        COMMAND ${CMAKE_SIZE} sentinel-mcu-qemu
-        COMMENT "Generating sentinel-mcu-qemu.bin and size report"
+        COMMAND ${CMAKE_SIZE} sentinel-mcu-qemu || true
+        COMMENT "MCU QEMU build complete"
     )
 endif()
 

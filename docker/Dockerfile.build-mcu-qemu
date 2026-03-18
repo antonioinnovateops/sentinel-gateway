@@ -1,15 +1,19 @@
-# Dockerfile for building MCU firmware targeting QEMU MPS2-AN505
+# Dockerfile for building MCU firmware for QEMU user-mode emulation
 #
-# Uses the same ARM toolchain as the STM32 build, but targets the
-# MPS2-AN505 Cortex-M33 FPGA image memory map.
+# Builds an ARM Linux ELF that runs under qemu-arm-static (user-mode).
+# Uses gcc-arm-linux-gnueabihf (Linux ARM) instead of gcc-arm-none-eabi (bare-metal).
+# The resulting binary uses POSIX sockets for TCP networking.
 
 FROM ubuntu:24.04 AS toolchain
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     make \
-    gcc-arm-none-eabi \
-    libnewlib-arm-none-eabi \
+    # ARM Linux cross-compiler (not bare-metal)
+    gcc-arm-linux-gnueabihf \
+    libc6-dev-armhf-cross \
+    # QEMU for testing the build
+    qemu-user-static \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m builder || true
@@ -25,7 +29,7 @@ COPY --chown=builder:builder src/ /workspace/src/
 
 RUN mkdir -p build && cd build && \
     cmake .. \
-      -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi-qemu.cmake \
+      -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-linux-gnueabihf.cmake \
       -DBUILD_LINUX=OFF \
       -DBUILD_MCU=OFF \
       -DBUILD_QEMU_MCU=ON \
@@ -33,11 +37,14 @@ RUN mkdir -p build && cd build && \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
     make -j$(nproc) VERBOSE=1
 
+# Verify the build produces a valid ARM ELF
+RUN file build/sentinel-mcu-qemu && \
+    echo "=== Testing binary with qemu-arm-static ===" && \
+    timeout 2 qemu-arm-static build/sentinel-mcu-qemu || echo "(Expected to timeout/fail without network)"
+
 RUN mkdir -p /workspace/output && \
-    cp build/sentinel-mcu-qemu /workspace/output/sentinel-mcu-qemu.elf 2>/dev/null || true && \
-    cp build/sentinel-mcu-qemu.bin /workspace/output/ 2>/dev/null || true && \
+    cp build/sentinel-mcu-qemu /workspace/output/sentinel-mcu-qemu 2>/dev/null || true && \
     cp build/sentinel-mcu-qemu.map /workspace/output/ 2>/dev/null || true && \
     ls -la /workspace/output/
 
-FROM scratch AS artifact
-COPY --from=build /workspace/output/ /
+CMD ["bash", "-c", "cp /workspace/build/sentinel-mcu-qemu /workspace/output/ 2>/dev/null || true && echo 'QEMU MCU firmware (user-mode) copied to output'"]
