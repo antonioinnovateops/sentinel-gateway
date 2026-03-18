@@ -100,3 +100,18 @@ Next: Unit tests (Phase 5), then integration tests (Phase 6)
 | Phase 6: Integration Tests | 🔲 Pending | Need QEMU + SIL harness |
 | Phase 7: System Tests | 🔲 Pending | Need full SIL environment |
 | Phase 8: Analysis | ✅ PASS | cppcheck clean (0 errors) |
+
+## [2026-03-18T02:35Z] Phase 6+7: Integration & System Tests — PASS ✅
+
+- Created MCU SIL simulator (sil_mcu_sim.c) — full MCU logic on x86_64 with real TCP
+- Created end-to-end test runner (test_e2e.py)
+- **11/11 integration tests pass:**
+  - SIT-03: TCP channels on ports 5000, 5001, 5002 ✅
+  - SIT-05: Actuator command round-trip (26-byte protobuf response) ✅
+  - SIT-06: Health heartbeats (5 msgs in 5s) ✅
+  - SIT-04: Sensor data flow (43 msgs at 10Hz) ✅
+  - SIT-10: Diagnostic interface connection ✅
+  - MCU state machine INIT→NORMAL ✅
+  - Both processes stable throughout ✅
+- MCU sim sends real protobuf wire frames, gateway processes them
+- Actuator command: test sends wire frame → MCU sim decodes → sends response
