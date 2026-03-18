@@ -12,6 +12,7 @@
 
 #include "../common/sentinel_types.h"
 #include <stddef.h>
+#include <stddef.h>
 
 /** Callback for received frames */
 typedef void (*tcp_recv_cb_t)(const uint8_t *frame, size_t len);

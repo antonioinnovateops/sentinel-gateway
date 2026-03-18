@@ -61,3 +61,12 @@ Next: Unit tests (Phase 5), then integration tests (Phase 6)
   - test_logger (4 tests): JSON Lines sensor/event logging
 - Stub HAL drivers for host-compiled MCU component tests
 - Host-compiled tests (x86_64) — no QEMU needed
+
+## [2026-03-18T02:00Z] Phase 3+4: MCU Firmware Build — PASS ✅
+
+- Fixed missing `<stddef.h>` and `<stdbool.h>` includes for bare-metal toolchain
+- Switched MCU Dockerfile from ARM download URL to Ubuntu `gcc-arm-none-eabi` package
+- MCU ELF: 4752 bytes text, 0 bytes data, 166KB BSS (lwIP pool + static buffers)
+- Both Docker builds pass:
+  - `sentinel-build-linux`: aarch64 ELF (Linux gateway)
+  - `sentinel-build-mcu`: ARM Cortex-M33 ELF (MCU firmware)
