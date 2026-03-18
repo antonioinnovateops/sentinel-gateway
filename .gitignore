@@ -43,3 +43,5 @@ tests/results/
 *.gcda
 *.gcno
 coverage/
+build-sil/
+results/
