@@ -3,7 +3,9 @@ FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y --no-install-recommends \
     qemu-system-arm \
     qemu-system-aarch64 \
+    qemu-user-static \
     qemu-utils \
+    binfmt-support \
     bridge-utils \
     iproute2 \
     python3 \
@@ -14,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     screen \
     iputils-ping \
     net-tools \
+    file \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --no-cache-dir --break-system-packages \

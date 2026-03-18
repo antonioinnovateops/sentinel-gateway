@@ -68,6 +68,43 @@ services:
           || true
       "
 
+  build-mcu-qemu:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.build-mcu-qemu
+      target: build
+    volumes:
+      - ./build/qemu-mcu:/workspace/output
+    network_mode: none
+
+  qemu-sil:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.qemu-sil
+    volumes:
+      - ./build/linux:/workspace/artifacts/linux:ro
+      - ./build/qemu-mcu:/workspace/artifacts/mcu-qemu:ro
+      - ./tests:/workspace/tests:ro
+      - ./tools/qemu:/workspace/qemu:ro
+      - ./results/qemu-sil:/workspace/results
+    privileged: true
+    depends_on:
+      build-linux:
+        condition: service_completed_successfully
+      build-mcu-qemu:
+        condition: service_completed_successfully
+    command: >
+      bash -c "
+        echo '=== QEMU SIL Test Environment ===' &&
+        echo 'MCU:     QEMU system-arm MPS2-AN505 (Cortex-M33)' &&
+        echo 'Gateway: QEMU user-mode aarch64 (or native x86)' &&
+        echo '' &&
+        cd /workspace/tests/qemu &&
+        python3 -m pytest test_qemu_sil.py -v --timeout=120
+          --junitxml=/workspace/results/qemu-sil-results.xml
+          -x
+      "
+
 volumes:
   build-cache-linux:
   build-cache-mcu:

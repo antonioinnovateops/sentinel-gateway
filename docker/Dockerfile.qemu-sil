@@ -1,0 +1,67 @@
+# Dockerfile for QEMU-based Software-in-the-Loop testing
+#
+# Runs actual cross-compiled binaries in QEMU emulation:
+# - MCU firmware (Cortex-M33) in qemu-system-arm -M mps2-an505
+# - Linux gateway (aarch64) in qemu-aarch64-static user-mode
+#
+# This provides higher fidelity testing than the pure x86 SIL
+# simulation by actually running the ARM machine code.
+
+FROM ubuntu:24.04
+
+# Install QEMU and dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # QEMU system emulation (for MCU)
+    qemu-system-arm \
+    # QEMU user-mode emulation (for aarch64 gateway)
+    qemu-user-static \
+    binfmt-support \
+    # Network utilities
+    bridge-utils \
+    iproute2 \
+    iputils-ping \
+    net-tools \
+    socat \
+    # Python test framework
+    python3 \
+    python3-pip \
+    python3-venv \
+    # Debugging tools
+    gdb-multiarch \
+    strace \
+    file \
+    # Misc
+    screen \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python test dependencies
+RUN pip3 install --no-cache-dir --break-system-packages \
+    pytest==8.1.1 \
+    pytest-timeout==2.3.1 \
+    protobuf==5.26.1 \
+    pexpect==4.9.0
+
+# Create non-root user
+RUN useradd -m builder || true
+
+# Set up binfmt for aarch64 (if not already configured by host)
+# This allows transparent execution of aarch64 binaries
+RUN update-binfmts --display || true
+
+USER builder
+WORKDIR /workspace
+
+# Volumes mounted at runtime:
+# ./build/linux/        -> /workspace/artifacts/linux/
+# ./build/qemu-mcu/     -> /workspace/artifacts/mcu-qemu/
+# ./tests/              -> /workspace/tests/
+# ./tools/qemu/         -> /workspace/qemu/
+# ./results/qemu-sil/   -> /workspace/results/
+
+# Environment for test discovery
+ENV PROJECT_ROOT=/workspace
+ENV PYTHONPATH=/workspace/tests
+
+# Default command: run QEMU SIL tests
+CMD ["python3", "-m", "pytest", "/workspace/tests/qemu/", "-v", "--timeout=120"]

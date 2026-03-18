@@ -18,6 +18,7 @@ add_compile_options(
 # Build options
 option(BUILD_LINUX "Build Linux gateway" ON)
 option(BUILD_MCU   "Build MCU firmware" OFF)
+option(BUILD_QEMU_MCU "Build MCU firmware for QEMU MPS2-AN505" OFF)
 option(BUILD_TESTS "Build unit tests" OFF)
 option(ENABLE_COVERAGE "Enable code coverage" OFF)
 
@@ -130,6 +131,65 @@ if(BUILD_MCU)
         COMMAND ${CMAKE_OBJCOPY} -O binary sentinel-mcu sentinel-mcu.bin
         COMMAND ${CMAKE_SIZE} sentinel-mcu
         COMMENT "Generating sentinel-mcu.bin and size report"
+    )
+endif()
+
+# ============================================
+# MCU Firmware for QEMU MPS2-AN505 (sentinel-mcu-qemu)
+# ============================================
+if(BUILD_QEMU_MCU)
+    set(MCU_QEMU_SOURCES
+        src/mcu/main.c
+        src/mcu/sensor_acquisition.c
+        src/mcu/actuator_control.c
+        src/mcu/protobuf_handler.c
+        src/mcu/tcp_stack.c
+        src/mcu/watchdog_mgr.c
+        src/mcu/config_store.c
+        src/mcu/health_reporter.c
+        src/mcu/startup_mps2_an505.s
+        src/mcu/hal/qemu/qemu_hal_shim.c
+        src/mcu/hal/qemu/adc_driver_qemu.c
+        src/mcu/hal/qemu/pwm_driver_qemu.c
+        src/mcu/hal/qemu/flash_driver_qemu.c
+        src/mcu/hal/qemu/watchdog_driver_qemu.c
+        src/mcu/hal/qemu/gpio_driver_qemu.c
+        src/mcu/hal/qemu/systick_qemu.c
+        ${COMMON_SOURCES}
+    )
+
+    add_executable(sentinel-mcu-qemu ${MCU_QEMU_SOURCES})
+
+    target_compile_definitions(sentinel-mcu-qemu PRIVATE
+        SENTINEL_PLATFORM_MCU=1
+        SENTINEL_PLATFORM_QEMU=1
+        SENTINEL_VERSION="${PROJECT_VERSION}"
+        MPS2_AN505=1
+        __HEAP_SIZE=0
+        _REENT_SMALL=1
+        PB_NO_ERRMSG=1
+        PB_BUFFER_ONLY=1
+    )
+
+    target_include_directories(sentinel-mcu-qemu PRIVATE
+        src/common
+        src/mcu
+        src/mcu/hal
+        src/mcu/hal/qemu
+    )
+
+    # Linker script for MPS2-AN505
+    set(QEMU_LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/src/mcu/mps2_an505.ld)
+    target_link_options(sentinel-mcu-qemu PRIVATE
+        -T${QEMU_LINKER_SCRIPT}
+        -Wl,-Map=${CMAKE_BINARY_DIR}/sentinel-mcu-qemu.map
+    )
+
+    # Post-build: generate .bin and size report
+    add_custom_command(TARGET sentinel-mcu-qemu POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -O binary sentinel-mcu-qemu sentinel-mcu-qemu.bin
+        COMMAND ${CMAKE_SIZE} sentinel-mcu-qemu
+        COMMENT "Generating sentinel-mcu-qemu.bin and size report"
     )
 endif()
 

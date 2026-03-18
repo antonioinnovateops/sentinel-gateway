@@ -28,13 +28,15 @@ git checkout impl/claude-code
 docker compose build
 ```
 
-This builds 4 images:
+This builds 6 images:
 
 | Image | Purpose |
 |-------|---------|
 | `build-linux` | Cross-compiles the Linux aarch64 gateway binary |
 | `build-mcu` | Cross-compiles the STM32U575 Cortex-M33 firmware |
+| `build-mcu-qemu` | Cross-compiles MCU firmware for QEMU MPS2-AN505 |
 | `sil` | Software-in-the-Loop test environment (Python + pytest) |
+| `qemu-sil` | QEMU-based SIL with real ARM emulation |
 | `analysis` | Static analysis (cppcheck MISRA checks) |
 
 > ☕ First build takes ~5 minutes (downloads ARM toolchains). Subsequent builds are cached and fast.
@@ -182,7 +184,85 @@ ls docs/
 
 ---
 
+## Phase 9 — QEMU-based SIL Testing (Optional)
+
+Phase 9 provides higher-fidelity testing by running the actual cross-compiled ARM binaries in QEMU emulation, rather than native x86 simulation.
+
+### Build MCU firmware for QEMU
+
+```bash
+docker compose run --rm build-mcu-qemu
+```
+Output: `build/qemu-mcu/sentinel-mcu-qemu.elf` (Cortex-M33, targets MPS2-AN505)
+
+### Run QEMU SIL tests
+
+```bash
+docker compose run --rm qemu-sil
+```
+
+**What this does:**
+1. Starts MCU firmware in `qemu-system-arm -M mps2-an505` (Cortex-M33 system emulation)
+2. Starts Linux gateway in `qemu-aarch64-static` (user-mode emulation)
+3. Verifies TCP communication between the two emulated systems
+4. Runs the same protocol tests as the x86 SIL suite
+
+**QEMU architecture:**
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                     Docker Container                        │
+│                                                             │
+│  ┌─────────────────────┐     TCP      ┌─────────────────┐  │
+│  │  qemu-system-arm    │◄────────────►│ qemu-aarch64    │  │
+│  │  -M mps2-an505      │  Port 15000  │ (user-mode)     │  │
+│  │                     │              │                 │  │
+│  │  sentinel-mcu-qemu  │              │ sentinel-gw     │  │
+│  │  (Cortex-M33 ELF)   │              │ (aarch64 ELF)   │  │
+│  └─────────────────────┘              └─────────────────┘  │
+│                                                             │
+│  Python test harness connects to gateway ports 5001, 5002  │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Run QEMU tests locally (without Docker)
+
+If you have QEMU installed on your host system:
+
+```bash
+# Build the QEMU MCU firmware
+cmake -B build/qemu-mcu -DBUILD_QEMU_MCU=ON \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi-qemu.cmake
+cmake --build build/qemu-mcu
+
+# Launch MCU in QEMU (in background)
+./tools/qemu/launch_mcu_fw.sh --background
+
+# Launch Linux gateway
+./tools/qemu/launch_linux_gw.sh --background
+
+# Run tests
+python3 -m pytest tests/qemu/test_qemu_sil.py -v
+```
+
+### MPS2-AN505 vs STM32U575
+
+The MCU firmware has two build targets:
+
+| Target | Platform | Memory Map | HAL |
+|--------|----------|------------|-----|
+| `sentinel-mcu` | STM32U575 | 0x08000000 Flash | `hal/*.c` |
+| `sentinel-mcu-qemu` | MPS2-AN505 | 0x00000000 SRAM | `hal/qemu/*.c` |
+
+The MPS2-AN505 is the closest Cortex-M33 platform that QEMU fully supports.
+The QEMU HAL shim (`src/mcu/hal/qemu/`) provides software-simulated peripherals:
+- ADC readings (configurable by test harness)
+- PWM output (RAM-backed registers)
+- GPIO mapped to FPGAIO LEDs
+- Watchdog mapped to CMSDK watchdog
+
+---
+
 ## What's next
 
-- **Phase 9:** QEMU-based SIL with actual aarch64 + Cortex-M33 emulation
 - **LLM Benchmarking:** Run different AI models against these same specs to compare output quality
