@@ -1,21 +1,16 @@
-# Changelog
+# CHANGELOG — impl/claude-code
 
-All notable changes to the Sentinel Gateway project will be documented in this file.
+Implementation attempt using Claude Code CLI against frozen specs (main branch).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## Format
 
-## [Unreleased]
+Each entry: timestamp, what was attempted, result (pass/fail), notes.
 
-### Added
-- Product Specification (PROD-SPEC-001)
-- Stakeholder Requirements (STKH-REQ-001) — 20 requirements
-- System Requirements Specification (SRS-001) — 80 requirements
-- System Architecture Document (SAD-001)
-- Protobuf schema definition (sentinel.proto)
-- Project plan and risk register
-- FMEA safety analysis (18 failure modes)
-- Agent skill definitions (6 roles)
-- AGENTS.md orchestration instructions
-- CMakeLists.txt build system skeleton
-- Repository structure per ASPICE best practices
+---
+
+## [2026-03-18T01:30Z] Branch Created
+
+- Branch `impl/claude-code` created from main (aa5735e)
+- Goal: Full Phase 3–8 implementation — Docker build environment, C source code, unit tests, integration tests, system qualification — all running in Docker SIL
+- Agent: Claude Code (Anthropic)
+- Host: john-server (4 cores, limited resources)
