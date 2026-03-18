@@ -24,6 +24,10 @@ Prove that with a sufficiently detailed specification and the right agent skill-
 4. The process follows **ASPICE CL2** rigor with **ASIL-B** safety practices
 5. Different AI models can be **benchmarked** against identical specifications
 
+## ASPICE V-Model
+
+![ASPICE V-Model](docs/architecture/diagrams/v_model.drawio.svg)
+
 ## Architecture Overview
 
 ![System Architecture Overview](docs/architecture/diagrams/system_overview.drawio.svg)

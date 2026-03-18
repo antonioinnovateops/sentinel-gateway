@@ -100,6 +100,11 @@ aspice_process: "MAN.3 Project Management"
 | WP-26 | Architecture Diagrams | SWE.2 | ✅ Complete (19 .drawio.svg) |
 | WP-27 | Container Dockerfiles | SWE.3 | 🔲 Phase 3 |
 | WP-28 | QEMU Launch Scripts | SWE.6 | 🔲 Phase 3 |
+| WP-29 | System Integration Test Plan | SYS.4 | ✅ Complete (SITP-001, 12 tests) |
+| WP-30 | System Qualification Test Plan | SYS.5 | ✅ Complete (SQTP-001, 20 tests) |
+| WP-31 | Quality Assurance Plan | SUP.1 | ✅ Complete (QAP-001) |
+| WP-32 | Config & Change Mgmt Plan | SUP.8/SUP.10 | ✅ Complete (CCMP-001) |
+| WP-33 | V-Model Diagram | SYS.3 | ✅ Complete (v_model.drawio.svg) |
 
 ## 4. Benchmarking Protocol
 
