@@ -3,16 +3,9 @@ FROM ubuntu:24.04 AS toolchain
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     make \
-    wget \
-    xz-utils \
+    gcc-arm-none-eabi \
+    libnewlib-arm-none-eabi \
     && rm -rf /var/lib/apt/lists/*
-
-# ARM GCC toolchain (pinned version)
-RUN wget -q https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz \
-    && tar xf arm-gnu-toolchain-*.tar.xz -C /opt/ \
-    && rm arm-gnu-toolchain-*.tar.xz
-
-ENV PATH="/opt/arm-gnu-toolchain-13.2.Rel1-x86_64-arm-none-eabi/bin:${PATH}"
 
 RUN useradd -m builder || true
 USER builder
@@ -35,10 +28,10 @@ RUN mkdir -p build && cd build && \
     make -j$(nproc) VERBOSE=1
 
 RUN mkdir -p /workspace/output && \
-    cp build/sentinel-mcu build/sentinel-mcu.bin /workspace/output/ 2>/dev/null; \
-    cp build/sentinel-mcu.elf /workspace/output/ 2>/dev/null; \
-    cp build/sentinel-mcu.map /workspace/output/ 2>/dev/null; \
-    true
+    cp build/sentinel-mcu /workspace/output/sentinel-mcu.elf 2>/dev/null || true && \
+    cp build/sentinel-mcu.bin /workspace/output/ 2>/dev/null || true && \
+    cp build/sentinel-mcu.map /workspace/output/ 2>/dev/null || true && \
+    ls -la /workspace/output/
 
 FROM scratch AS artifact
 COPY --from=build /workspace/output/ /

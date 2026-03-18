@@ -5,6 +5,7 @@
 
 #include "pwm_driver.h"
 #include "stm32u575.h"
+#include <stdbool.h>
 
 static bool g_pwm_initialized = false;
 

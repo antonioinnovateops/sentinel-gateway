@@ -6,8 +6,9 @@
 #ifndef WATCHDOG_DRIVER_H
 #define WATCHDOG_DRIVER_H
 
-#include "../../common/error_codes.h"
+#include <stdint.h>
 #include <stdbool.h>
+#include "../../common/error_codes.h"
 
 sentinel_err_t iwdg_init(uint32_t timeout_ms);
 void iwdg_feed(void);

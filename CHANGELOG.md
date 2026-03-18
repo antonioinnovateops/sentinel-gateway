@@ -27,3 +27,12 @@ Each entry: timestamp, what was attempted, result (pass/fail), notes.
 - **Native x86_64 build: PASS** — sentinel-gw runs, binds ports, handles signals
 - **Docker aarch64 cross-build: PASS** — ELF64 ARM64 binary produced
 - MCU Docker build: pending (ARM toolchain download)
+
+## [2026-03-18T01:53Z] MCU Docker Cross-Build — PASS ✅
+
+- Fixed bare-metal includes (stddef.h, stdbool.h, stdint.h for all HAL headers)
+- Fixed missing wire_frame.h include in MCU main.c
+- Used Ubuntu gcc-arm-none-eabi package (ARM download URL broken)
+- Docker aarch64 Linux build: PASS ✅
+- Docker ARM Cortex-M33 MCU build: PASS ✅
+- Both images build in ~1 second (after layer caching)

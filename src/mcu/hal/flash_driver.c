@@ -8,6 +8,7 @@
 
 #include "flash_driver.h"
 #include "stm32u575.h"
+#include <stdbool.h>
 #include <string.h>
 
 /* Simulated config flash in RAM (for QEMU compatibility) */

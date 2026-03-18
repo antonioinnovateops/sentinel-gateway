@@ -15,6 +15,7 @@
  */
 
 #include "../common/sentinel_types.h"
+#include "../common/wire_frame.h"
 #include "hal/systick.h"
 #include "hal/gpio_driver.h"
 #include "hal/flash_driver.h"

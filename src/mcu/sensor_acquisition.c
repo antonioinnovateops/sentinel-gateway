@@ -7,6 +7,7 @@
 #include "sensor_acquisition.h"
 #include "hal/adc_driver.h"
 #include "hal/systick.h"
+#include <stddef.h>
 
 /* Calibration constants (linear: calibrated = raw * scale + offset) */
 static const float g_cal_scale[SENTINEL_MAX_CHANNELS] = {

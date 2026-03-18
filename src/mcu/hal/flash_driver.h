@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 #include "../../common/error_codes.h"
 
 #define FLASH_CONFIG_ADDR   0x08030000UL

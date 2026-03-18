@@ -7,6 +7,7 @@
 #define SENTINEL_TYPES_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include "error_codes.h"
 

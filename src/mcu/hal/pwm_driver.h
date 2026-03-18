@@ -7,6 +7,8 @@
 #define PWM_DRIVER_H
 
 #include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 #include "../../common/error_codes.h"
 
 #define PWM_MAX_CHANNELS 2U

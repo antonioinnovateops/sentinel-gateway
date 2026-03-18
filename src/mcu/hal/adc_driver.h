@@ -7,6 +7,8 @@
 #define ADC_DRIVER_H
 
 #include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 #include "../../common/error_codes.h"
 
 #define ADC_MAX_CHANNELS  4U

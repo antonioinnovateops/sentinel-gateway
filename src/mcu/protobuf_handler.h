@@ -8,6 +8,7 @@
 
 #include "../common/sentinel_types.h"
 #include "health_reporter.h"
+#include <stddef.h>
 
 /* Encode buffer size */
 #define PB_ENCODE_BUF_SIZE  512U
