@@ -44,3 +44,6 @@ tests/results/
 *.gcno
 coverage/
 build-native/
+events.jsonl
+sensor_data.jsonl
+build-*/
