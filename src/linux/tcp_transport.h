@@ -28,8 +28,14 @@ sentinel_err_t transport_listen_diagnostics(void);
 /** Send a wire frame to MCU command channel */
 sentinel_err_t transport_send_command(const uint8_t *frame, size_t len);
 
+/** Callback for diagnostic text commands */
+typedef void (*transport_diag_cb_t)(int client_fd, const char *cmd, void *ctx);
+
 /** Register callback for received messages */
 void transport_set_recv_callback(transport_recv_cb_t cb, void *ctx);
+
+/** Register callback for diagnostic text commands */
+void transport_set_diag_callback(transport_diag_cb_t cb, void *ctx);
 
 /** Poll for I/O events (call from event loop) */
 sentinel_err_t transport_poll(int timeout_ms);

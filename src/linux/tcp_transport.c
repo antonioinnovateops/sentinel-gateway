@@ -34,6 +34,15 @@ static int g_diag_fd = -1;      /* Accepted diagnostics client */
 
 static transport_recv_cb_t g_recv_cb = NULL;
 static void *g_recv_ctx = NULL;
+static transport_diag_cb_t g_diag_cb = NULL;
+static void *g_diag_ctx = NULL;
+
+/* Diagnostic receive buffer (text, line-based) */
+static uint8_t g_diag_rx_buf[512];
+static size_t g_diag_rx_pos = 0U;
+
+/* Forward declarations */
+static void process_diag_data(int fd);
 
 /* Receive buffer for reassembling wire frames */
 static uint8_t g_rx_buf[RX_BUF_SIZE];
@@ -138,6 +147,8 @@ sentinel_err_t transport_listen_diagnostics(void)
         return SENTINEL_ERR_COMM;
     }
     epoll_add(g_diag_listen_fd);
+    fprintf(stderr, "[TRANSPORT] diag listen fd=%d, epoll_fd=%d\n",
+            g_diag_listen_fd, g_epoll_fd);
     return SENTINEL_OK;
 }
 
@@ -214,13 +225,18 @@ sentinel_err_t transport_poll(int timeout_ms)
                 g_diag_fd = new_fd;
                 (void)set_nonblocking(g_diag_fd);
                 epoll_add(g_diag_fd);
+                fprintf(stderr, "[DIAG] Accepted diag client fd=%d\n", g_diag_fd);
             }
             continue;
         }
 
         /* Data on existing connections */
         if (events[i].events & EPOLLIN) {
-            process_received_data(fd);
+            if (fd == g_diag_fd) {
+                process_diag_data(fd);
+            } else {
+                process_received_data(fd);
+            }
         }
     }
     return SENTINEL_OK;
@@ -239,6 +255,46 @@ void transport_set_recv_callback(transport_recv_cb_t cb, void *ctx)
 {
     g_recv_cb = cb;
     g_recv_ctx = ctx;
+}
+
+void transport_set_diag_callback(transport_diag_cb_t cb, void *ctx)
+{
+    g_diag_cb = cb;
+    g_diag_ctx = ctx;
+}
+
+static void process_diag_data(int fd)
+{
+    ssize_t n = read(fd, g_diag_rx_buf + g_diag_rx_pos,
+                     sizeof(g_diag_rx_buf) - g_diag_rx_pos - 1U);
+    fprintf(stderr, "[DIAG] read fd=%d n=%zd\n", fd, n);
+    if (n <= 0) {
+        return;
+    }
+    g_diag_rx_pos += (size_t)n;
+    g_diag_rx_buf[g_diag_rx_pos] = '\0';
+
+    /* Process complete lines */
+    char *newline = NULL;
+    while ((newline = strchr((char *)g_diag_rx_buf, '\n')) != NULL) {
+        *newline = '\0';
+        /* Strip \r if present */
+        if (newline > (char *)g_diag_rx_buf && *(newline - 1) == '\r') {
+            *(newline - 1) = '\0';
+        }
+
+        if (g_diag_cb != NULL && g_diag_rx_buf[0] != '\0') {
+            g_diag_cb(fd, (const char *)g_diag_rx_buf, g_diag_ctx);
+        }
+
+        /* Shift remaining data */
+        size_t consumed = (size_t)(newline - (char *)g_diag_rx_buf) + 1U;
+        if (g_diag_rx_pos > consumed) {
+            (void)memmove(g_diag_rx_buf, newline + 1, g_diag_rx_pos - consumed);
+        }
+        g_diag_rx_pos -= consumed;
+        g_diag_rx_buf[g_diag_rx_pos] = '\0';
+    }
 }
 
 bool transport_is_connected(void)

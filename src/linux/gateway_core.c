@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <time.h>
 #include <string.h>
+#include <unistd.h>
 
 static volatile sig_atomic_t g_running = 1;
 
@@ -34,6 +35,17 @@ static uint64_t get_ms(void)
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)(ts.tv_nsec / 1000000L);
+}
+
+/* Diagnostic text command callback */
+static void on_diag_command(int client_fd, const char *cmd, void *ctx)
+{
+    (void)ctx;
+    char response[512];
+    diagnostics_process_command(cmd, response, sizeof(response));
+
+    /* Send response back to diagnostic client */
+    (void)write(client_fd, response, strlen(response));
 }
 
 /* Message dispatch callback from transport layer */
@@ -102,6 +114,7 @@ sentinel_err_t gateway_init(void)
     if (err != SENTINEL_OK) { return err; }
 
     transport_set_recv_callback(on_message_received, NULL);
+    transport_set_diag_callback(on_diag_command, NULL);
 
     /* Start listening for telemetry and diagnostics */
     err = transport_listen_telemetry();
