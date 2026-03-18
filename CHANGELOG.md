@@ -70,3 +70,14 @@ Next: Unit tests (Phase 5), then integration tests (Phase 6)
 - Both Docker builds pass:
   - `sentinel-build-linux`: aarch64 ELF (Linux gateway)
   - `sentinel-build-mcu`: ARM Cortex-M33 ELF (MCU firmware)
+
+## [2026-03-18T02:05Z] Phase 5: Unit Tests — PASS ✅
+
+- Unity test framework integrated (vendor/)
+- 4 test suites, 31 test cases:
+  - test_wire_frame: 8 tests (encode, decode, round-trip, error handling)
+  - test_error_codes: 3 tests (values, uniqueness)
+  - test_config_store: 10 tests (defaults, save/load, CRC, validation)
+  - test_actuator_control: 10 tests (set, limits, failsafe, readback)
+- PWM stub for host-side testing (no hardware register access)
+- All 4 Docker images build successfully: build-linux, build-mcu, sil, analysis

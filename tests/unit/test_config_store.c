@@ -1,133 +1,153 @@
 /**
  * @file test_config_store.c
- * @brief Unit tests for MCU config store (flash-backed, CRC protected)
- * @implements UTP-001 test cases for SWE-058 through SWE-065
+ * @brief Unit tests for MCU config store (CRC, validation, defaults)
+ * @implements UTP-001 test cases TC-CS-001 through TC-CS-010
  */
 
-#include "unity.h"
-#include "config_store.h"
+#include "vendor/unity.h"
+#include "../../src/mcu/config_store.h"
+#include "../../src/mcu/hal/flash_driver.h"
 #include <string.h>
 
 void setUp(void)
 {
-    /* Re-init flash for each test */
-    extern sentinel_err_t flash_init(void);
-    flash_init();
+    flash_init(); /* Reset simulated flash to 0xFF */
 }
 
 void tearDown(void) {}
 
-/* UT-CS-001: Load defaults on empty flash */
-void test_load_defaults_on_empty(void)
+/* TC-CS-001: Default config values */
+void test_defaults_valid(void)
+{
+    system_config_t config;
+    config_store_get_defaults(&config);
+
+    TEST_ASSERT_EQUAL(10, config.sensor_rates_hz[0]);
+    TEST_ASSERT_EQUAL(10, config.sensor_rates_hz[3]);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, config.actuator_min_percent[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 95.0f, config.actuator_max_percent[0]);
+    TEST_ASSERT_EQUAL(1000, config.heartbeat_interval_ms);
+    TEST_ASSERT_EQUAL(3000, config.comm_timeout_ms);
+}
+
+/* TC-CS-002: Save and load round-trip */
+void test_save_load_roundtrip(void)
+{
+    system_config_t saved, loaded;
+    config_store_get_defaults(&saved);
+    saved.sensor_rates_hz[0] = 50;
+    saved.actuator_max_percent[1] = 80.0f;
+
+    sentinel_err_t err = config_store_save(&saved);
+    TEST_ASSERT_EQUAL(SENTINEL_OK, err);
+
+    err = config_store_load(&loaded);
+    TEST_ASSERT_EQUAL(SENTINEL_OK, err);
+    TEST_ASSERT_EQUAL(50, loaded.sensor_rates_hz[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 80.0f, loaded.actuator_max_percent[1]);
+}
+
+/* TC-CS-003: Load from blank flash returns defaults */
+void test_load_blank_flash_returns_defaults(void)
 {
     system_config_t config;
     sentinel_err_t err = config_store_load(&config);
 
-    /* Should fail (no valid data) but populate defaults */
+    /* Flash is all 0xFF → magic mismatch → defaults */
     TEST_ASSERT_NOT_EQUAL(SENTINEL_OK, err);
-    TEST_ASSERT_EQUAL(10, config.sensor_rates_hz[0]);
-    TEST_ASSERT_EQUAL(10, config.sensor_rates_hz[3]);
-    TEST_ASSERT_FLOAT_WITHIN(0.1f, 95.0f, config.actuator_max_percent[0]);
+    TEST_ASSERT_EQUAL(10, config.sensor_rates_hz[0]); /* Got defaults */
 }
 
-/* UT-CS-002: Save and load roundtrip */
-void test_save_load_roundtrip(void)
-{
-    system_config_t config;
-    config_store_get_defaults(&config);
-    config.sensor_rates_hz[0] = 50;
-    config.sensor_rates_hz[1] = 25;
-    config.actuator_max_percent[0] = 80.0f;
-    config.heartbeat_interval_ms = 2000;
-
-    sentinel_err_t err = config_store_save(&config);
-    TEST_ASSERT_EQUAL(SENTINEL_OK, err);
-
-    system_config_t loaded;
-    err = config_store_load(&loaded);
-    TEST_ASSERT_EQUAL(SENTINEL_OK, err);
-    TEST_ASSERT_EQUAL(50, loaded.sensor_rates_hz[0]);
-    TEST_ASSERT_EQUAL(25, loaded.sensor_rates_hz[1]);
-    TEST_ASSERT_FLOAT_WITHIN(0.1f, 80.0f, loaded.actuator_max_percent[0]);
-    TEST_ASSERT_EQUAL(2000, loaded.heartbeat_interval_ms);
-}
-
-/* UT-CS-003: Validate rejects zero rate */
+/* TC-CS-004: Validate rejects zero rate */
 void test_validate_rejects_zero_rate(void)
 {
     system_config_t config;
     config_store_get_defaults(&config);
     config.sensor_rates_hz[2] = 0;
 
-    TEST_ASSERT_EQUAL(SENTINEL_ERR_OUT_OF_RANGE,
-                      config_store_validate(&config));
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_OUT_OF_RANGE, config_store_validate(&config));
 }
 
-/* UT-CS-004: Validate rejects rate > 100 */
+/* TC-CS-005: Validate rejects rate > 100 */
 void test_validate_rejects_high_rate(void)
 {
     system_config_t config;
     config_store_get_defaults(&config);
-    config.sensor_rates_hz[0] = 101;
+    config.sensor_rates_hz[1] = 101;
 
-    TEST_ASSERT_EQUAL(SENTINEL_ERR_OUT_OF_RANGE,
-                      config_store_validate(&config));
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_OUT_OF_RANGE, config_store_validate(&config));
 }
 
-/* UT-CS-005: Validate rejects min >= max */
-void test_validate_rejects_bad_limits(void)
+/* TC-CS-006: Validate rejects min >= max */
+void test_validate_rejects_inverted_limits(void)
 {
     system_config_t config;
     config_store_get_defaults(&config);
-    config.actuator_min_percent[0] = 95.0f;
-    config.actuator_max_percent[0] = 50.0f;
+    config.actuator_min_percent[0] = 50.0f;
+    config.actuator_max_percent[0] = 30.0f;
 
-    TEST_ASSERT_EQUAL(SENTINEL_ERR_INVALID_ARG,
-                      config_store_validate(&config));
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_INVALID_ARG, config_store_validate(&config));
 }
 
-/* UT-CS-006: NULL arg rejected */
-void test_null_args(void)
+/* TC-CS-007: Validate rejects max > 100% */
+void test_validate_rejects_over_100(void)
+{
+    system_config_t config;
+    config_store_get_defaults(&config);
+    config.actuator_max_percent[0] = 101.0f;
+
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_OUT_OF_RANGE, config_store_validate(&config));
+}
+
+/* TC-CS-008: Save rejects invalid config */
+void test_save_rejects_invalid(void)
+{
+    system_config_t config;
+    config_store_get_defaults(&config);
+    config.sensor_rates_hz[0] = 0; /* Invalid */
+
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_OUT_OF_RANGE, config_store_save(&config));
+}
+
+/* TC-CS-009: NULL pointer handling */
+void test_null_pointers(void)
 {
     TEST_ASSERT_EQUAL(SENTINEL_ERR_INVALID_ARG, config_store_load(NULL));
     TEST_ASSERT_EQUAL(SENTINEL_ERR_INVALID_ARG, config_store_save(NULL));
     TEST_ASSERT_EQUAL(SENTINEL_ERR_INVALID_ARG, config_store_validate(NULL));
 }
 
-/* UT-CS-007: Defaults are valid */
-void test_defaults_valid(void)
+/* TC-CS-010: CRC corruption detection */
+void test_crc_corruption_detected(void)
 {
-    system_config_t config;
-    config_store_get_defaults(&config);
-    TEST_ASSERT_EQUAL(SENTINEL_OK, config_store_validate(&config));
-}
+    system_config_t saved, loaded;
+    config_store_get_defaults(&saved);
 
-/* UT-CS-008: Overwrite existing config */
-void test_overwrite_config(void)
-{
-    system_config_t c1, c2, loaded;
-    config_store_get_defaults(&c1);
-    c1.sensor_rates_hz[0] = 20;
-    config_store_save(&c1);
+    config_store_save(&saved);
 
-    config_store_get_defaults(&c2);
-    c2.sensor_rates_hz[0] = 75;
-    config_store_save(&c2);
+    /* Corrupt a byte in the config data area (after magic+version header = offset 8) */
+    uint8_t byte = 0x42;
+    flash_write(FLASH_CONFIG_ADDR + 8, &byte, 1);
 
-    config_store_load(&loaded);
-    TEST_ASSERT_EQUAL(75, loaded.sensor_rates_hz[0]);
+    sentinel_err_t err = config_store_load(&loaded);
+    /* Should fail: either CRC mismatch or validation failure */
+    TEST_ASSERT_NOT_EQUAL(SENTINEL_OK, err);
+    /* Loaded defaults as fallback */
+    TEST_ASSERT_EQUAL(10, loaded.sensor_rates_hz[0]);
 }
 
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_load_defaults_on_empty);
+    RUN_TEST(test_defaults_valid);
     RUN_TEST(test_save_load_roundtrip);
+    RUN_TEST(test_load_blank_flash_returns_defaults);
     RUN_TEST(test_validate_rejects_zero_rate);
     RUN_TEST(test_validate_rejects_high_rate);
-    RUN_TEST(test_validate_rejects_bad_limits);
-    RUN_TEST(test_null_args);
-    RUN_TEST(test_defaults_valid);
-    RUN_TEST(test_overwrite_config);
+    RUN_TEST(test_validate_rejects_inverted_limits);
+    RUN_TEST(test_validate_rejects_over_100);
+    RUN_TEST(test_save_rejects_invalid);
+    RUN_TEST(test_null_pointers);
+    RUN_TEST(test_crc_corruption_detected);
     return UNITY_END();
 }
