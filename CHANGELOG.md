@@ -49,3 +49,15 @@ Each entry: timestamp, what was attempted, result (pass/fail), notes.
 Phase 3 container build environment: COMPLETE
 Phase 4 source implementation: COMPLETE (14 components + HAL)
 Next: Unit tests (Phase 5), then integration tests (Phase 6)
+
+## [2026-03-18T01:58Z] Phase 5: Unit Tests — PASS ✅
+
+- Unity test framework integrated (vendor/unity.c)
+- 5 test suites, 32 test cases, 100% pass:
+  - test_wire_frame (10 tests): encode/decode/roundtrip/error handling
+  - test_config_store (8 tests): save/load/validate/CRC/defaults
+  - test_actuator_control (8 tests): duty cycle/limits/failsafe/readback
+  - test_diagnostics (6 tests): CLI commands/error handling
+  - test_logger (4 tests): JSON Lines sensor/event logging
+- Stub HAL drivers for host-compiled MCU component tests
+- Host-compiled tests (x86_64) — no QEMU needed
