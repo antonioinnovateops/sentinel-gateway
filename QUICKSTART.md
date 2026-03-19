@@ -139,31 +139,29 @@ Results: `results/analysis/cppcheck.xml`
 
 ## Interactive QEMU session
 
-Start the full system and interact with it live — real ARM binaries, real TCP, real protocol:
+Start the full system and talk to it from your host machine — real ARM binaries, real TCP, real protocol.
+
+### Option A: Connect from your host terminal (recommended)
+
+This exposes the gateway ports to your host with `-p`:
+
+**Terminal 1** — Start the system:
 
 ```bash
-# Build the ARM binaries first
-docker-compose run --rm build-linux
-docker-compose run --rm build-mcu-qemu
-
-# Get an interactive shell
-docker-compose run --rm qemu-sil bash
+docker-compose run --rm -p 5002:5002 -p 5001:5001 -p 5000:5000 qemu-sil bash
 ```
 
-Inside the container, start both systems:
+Inside the container:
 
 ```bash
-# Start the MCU firmware (real ARM binary under QEMU)
 qemu-arm-static /workspace/artifacts/mcu-qemu/sentinel-mcu-qemu &
 sleep 1
-
-# Start the Linux gateway (real aarch64 binary under QEMU)
 export SENTINEL_MCU_HOST=127.0.0.1
 qemu-aarch64-static -L /usr/aarch64-linux-gnu /workspace/artifacts/linux/sentinel-gw &
 sleep 2
 ```
 
-You should see both processes connect:
+You should see:
 
 ```
 [TCP-QEMU] Listening on port 5000 for commands
@@ -172,49 +170,74 @@ You should see both processes connect:
 [TCP-QEMU] Connected to telemetry port 5001
 ```
 
-### Port 5002 — Diagnostic interface (text commands)
+**Terminal 2** — Connect from your host:
 
-Connect with socat for an interactive session:
+```bash
+# Option 1: Python (works everywhere, no install needed)
+python3 -c "
+import socket, time
+s = socket.socket()
+s.connect(('localhost', 5002))
+print('Connected! Type commands:')
+while True:
+    cmd = input('> ')
+    s.sendall((cmd + '\n').encode())
+    time.sleep(0.3)
+    print(s.recv(4096).decode().strip())
+"
+
+# Option 2: socat (interactive, install with: sudo apt install socat)
+socat - TCP:localhost:5002
+
+# Option 3: netcat
+nc localhost 5002
+```
+
+Type commands:
+
+```
+> help
+Commands: status, sensor read <ch>, actuator set <id> <pct>, version, help
+
+> status
+state=INIT uptime=0s wd_resets=0 comm=OK
+
+> version
+linux=1.0.0 mcu=pending
+
+> sensor read 0
+ch=0 raw=0 cal=0.000
+
+> actuator set 0 50
+OK
+```
+
+### Option B: Connect from inside the container
+
+If you don't need host access, skip the `-p` flags:
+
+```bash
+docker-compose run --rm qemu-sil bash
+```
+
+Start the system (same commands as above), then connect inside the container:
 
 ```bash
 socat - TCP:127.0.0.1:5002
 ```
 
-Type commands (one per line):
+### Port 5001 — Read raw MCU telemetry
 
-```
-help
-Commands: status, sensor read <ch>, actuator set <id> <pct>, version, help
-
-status
-state=INIT uptime=0s wd_resets=0 comm=OK
-
-version
-linux=1.0.0 mcu=pending
-
-sensor read 0
-ch=0 raw=0 cal=0.000
-
-actuator set 0 50
-OK
-```
-
-Press `Ctrl+C` to disconnect.
-
-### Port 5001 — Telemetry channel (binary wire frames)
-
-Port 5001 is the telemetry channel where the MCU sends sensor data and health status. The data is binary (protobuf inside wire frames), so use this script:
+Port 5001 carries binary sensor data and health messages from the MCU. Run this from your host (or inside the container, replacing `localhost` with `127.0.0.1`):
 
 ```bash
 python3 -c "
 import socket, struct
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(('127.0.0.1', 5001))
+s = socket.socket()
+s.connect(('localhost', 5001))
 s.settimeout(5)
-print('Connected to telemetry port 5001')
-print('Listening for MCU messages (Ctrl+C to stop)...')
-print()
+print('Listening for MCU wire frames (Ctrl+C to stop)...')
 
 MSG_TYPES = {0x01: 'SENSOR_DATA', 0x02: 'HEALTH_STATUS',
              0x11: 'ACTUATOR_RSP', 0x21: 'CONFIG_RSP'}
@@ -226,33 +249,35 @@ try:
         msg_type = header[4]
         payload = s.recv(length) if length > 0 else b''
         name = MSG_TYPES.get(msg_type, f'UNKNOWN(0x{msg_type:02X})')
-        print(f'  [{name}] {length} bytes payload')
+        print(f'  [{name}] {length} bytes')
 except KeyboardInterrupt:
-    print()
+    pass
 finally:
     s.close()
 "
 ```
 
-Expected output (health every 1s, sensor data at 10 Hz):
-
-```
-  [SENSOR_DATA] 87 bytes payload
-  [SENSOR_DATA] 87 bytes payload
-  [HEALTH_STATUS] 42 bytes payload
-  ...
-```
-
-> **Note:** Connecting to port 5001 replaces the gateway's telemetry connection. The gateway stops receiving MCU data while your script is connected. Disconnect to restore normal operation.
+> **Note:** Connecting to port 5001 takes over the MCU's telemetry slot. The gateway stops receiving MCU data while you're connected. Disconnect to restore normal operation.
 
 ### TCP port map
 
 ```
-Port 5000 — MCU command channel (gateway → MCU, binary protobuf)
-Port 5001 — Telemetry channel   (MCU → gateway, binary protobuf)
-Port 5002 — Diagnostic interface (you → gateway, text commands)
-             ▲
-             └── This is where you interact
+┌──────────────────────────────────────────────────────────────┐
+│                    Docker Container                           │
+│                                                              │
+│  qemu-arm-static          qemu-aarch64-static                │
+│  ┌──────────────┐        ┌──────────────────┐               │
+│  │ MCU firmware  │◄─5000─►│ Linux gateway    │               │
+│  │ (ARM32 ELF)  │  cmd   │ (aarch64 ELF)    │               │
+│  └──────────────┘        │                  │               │
+│         │                │  5001 telemetry  │               │
+│         └───────5001────►│  5002 diagnostic─┼──► -p 5002    │
+│                          └──────────────────┘               │
+└──────────────────────────────────────────────────────────────┘
+                                                    │
+                                            Your host terminal
+                                            python3 / socat / nc
+                                            localhost:5002
 ```
 
 ---
