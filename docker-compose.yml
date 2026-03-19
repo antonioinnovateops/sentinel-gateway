@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   build-linux:
     build:
@@ -101,6 +99,7 @@ services:
       - ./config:/workspace/config:ro
       - ./cmake:/workspace/cmake:ro
       - ./src:/workspace/src:ro
+    user: root
     depends_on:
       build-linux:
         condition: service_completed_successfully
