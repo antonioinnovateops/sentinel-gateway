@@ -14,7 +14,22 @@ aspice_process: "SWE.6 Software Qualification Test"
 
 This document specifies the Software-in-the-Loop (SIL) test environment used to verify and validate the Sentinel Gateway system without physical hardware. All verification activities from unit tests through system qualification execute within this containerized SIL environment.
 
-## 2. SIL Architecture
+## 1.1 SIL Approaches
+
+The project provides two SIL approaches, both running via Docker:
+
+| Approach | Docker Command | MCU Implementation | Fidelity | Speed |
+|----------|---------------|-------------------|----------|-------|
+| **Fast SIL** (default) | `docker-compose run --rm sil` | x86 MCU simulator (`sil_mcu_sim.c`) | Protocol + logic level | ~8 seconds |
+| **QEMU SIL** (optional) | `docker-compose run --rm qemu-sil` | Cross-compiled ARM binary via `qemu-arm-static` | Real instruction set | ~2 minutes |
+
+Both execute the same Integration Test Plan (ITP-001) scenarios. The fast SIL is the primary developer workflow; QEMU SIL provides higher fidelity for release validation.
+
+For the practical developer guide, see `docs/guides/sil_developer_guide.md`.
+
+The remainder of this document specifies the QEMU-based SIL architecture.
+
+## 2. SIL Architecture (QEMU)
 
 ### 2.1 Environment Components
 

@@ -684,6 +684,14 @@ This document specifies the system requirements for the Sentinel Gateway. It ser
 - **Source**: [STKH-020]
 - **Acceptance**: Deviation records exist for all Advisory violations
 
+**[SYS-081] SIL Developer Accessibility**
+- **Description**: The project shall provide a single-command SIL test environment that enables any developer to execute the full integration test plan (ITP-001) against their implementation without manual setup, QEMU configuration, or hardware. The SIL environment shall map each automated test to its corresponding integration test scenario (IT-01 through IT-12) and system requirement, and shall produce a JUnit XML report for CI integration.
+- **Type**: Process
+- **Safety**: N/A
+- **Source**: [STKH-016], [STKH-019]
+- **Acceptance**: `docker-compose run --rm sil` executes all integration test scenarios, outputs per-test pass/fail with requirement traceability, and writes JUnit XML to `results/sil/`
+- **Verified By**: Developer guide at `docs/guides/sil_developer_guide.md`
+
 ---
 
 ## 6. Requirement Summary
@@ -707,5 +715,5 @@ This document specifies the system requirements for the Sentinel Gateway. It ser
 | Performance | SYS-066 to SYS-068 | 3 | 0 |
 | Reliability | SYS-069 to SYS-071 | 3 | 2 |
 | Memory | SYS-072 to SYS-073 | 2 | 1 |
-| Process | SYS-074 to SYS-080 | 7 | 0 |
-| **TOTAL** | SYS-001 to SYS-080 | **80** | **22** |
+| Process | SYS-074 to SYS-081 | 8 | 0 |
+| **TOTAL** | SYS-001 to SYS-081 | **81** | **22** |

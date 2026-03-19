@@ -156,6 +156,14 @@ static void process_received_data(int fd)
 {
     ssize_t n = read(fd, g_rx_buf + g_rx_pos, RX_BUF_SIZE - g_rx_pos);
     if (n <= 0) {
+        if (n == 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) {
+            /* Peer disconnected — clean up */
+            (void)epoll_ctl(g_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+            close(fd);
+            if (fd == g_tel_fd) { g_tel_fd = -1; }
+            if (fd == g_cmd_fd) { g_cmd_fd = -1; }
+            g_rx_pos = 0U;
+        }
         return;
     }
     g_rx_pos += (size_t)n;
@@ -267,8 +275,14 @@ static void process_diag_data(int fd)
 {
     ssize_t n = read(fd, g_diag_rx_buf + g_diag_rx_pos,
                      sizeof(g_diag_rx_buf) - g_diag_rx_pos - 1U);
-    fprintf(stderr, "[DIAG] read fd=%d n=%zd\n", fd, n);
     if (n <= 0) {
+        if (n == 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) {
+            /* Client disconnected — close fd and remove from epoll */
+            (void)epoll_ctl(g_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+            close(fd);
+            if (fd == g_diag_fd) { g_diag_fd = -1; }
+            g_diag_rx_pos = 0U;
+        }
         return;
     }
     g_diag_rx_pos += (size_t)n;

@@ -18,6 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     net-tools \
     file \
     gcc \
+    libc6-dev \
+    cmake \
+    make \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --no-cache-dir --break-system-packages \

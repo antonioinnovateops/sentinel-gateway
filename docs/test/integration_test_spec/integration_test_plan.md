@@ -12,9 +12,15 @@ aspice_process: "SWE.5 Software Integration Test"
 
 ## 1. Test Environment
 
-- **Platform**: QEMU SIL (both Linux and MCU VMs running)
-- **Network**: Virtual bridge between VMs (simulating USB CDC-ECM)
-- **Test Harness**: Python script connecting via TCP to Linux ports
+Two execution modes are available (both via Docker):
+
+| Mode | Command | MCU | Gateway | Network |
+|------|---------|-----|---------|---------|
+| **Fast SIL** (default) | `docker-compose run --rm sil` | x86 MCU simulator | Native x86 gateway | localhost TCP |
+| **QEMU SIL** (optional) | `docker-compose run --rm qemu-sil` | ARM binary via qemu-arm-static | aarch64/x86 gateway | localhost TCP |
+
+- **Test Harness**: Python pytest (`tests/integration/test_sil.py`) connecting via diagnostic port TCP:5002
+- **Test Report**: JUnit XML at `results/sil/sil-results.xml`
 
 ## 2. Integration Test Scenarios
 

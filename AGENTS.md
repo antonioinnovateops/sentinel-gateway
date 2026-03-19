@@ -51,8 +51,8 @@ Build a fully compilable, fully tested, ASPICE-compliant embedded system from th
 4. Create Dockerfiles in `docker/` for all 5 images (build-linux, build-mcu, sil, yocto, analysis)
 5. Create `docker-compose.yml` per BUILD-001 Section 4
 6. Create CMake toolchain files in `cmake/`
-7. Create QEMU launch scripts in `tools/sil/`
-8. Verify: `docker compose build` succeeds, QEMU boots both VMs
+7. Create QEMU launch scripts in `tools/qemu/`
+8. Verify: `docker-compose build` succeeds, `docker-compose run --rm sil` passes all tests
 
 **Quality Gate**: All containers build, QEMU dual-VM boots and establishes TCP connectivity.
 

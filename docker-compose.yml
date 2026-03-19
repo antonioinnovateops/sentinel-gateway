@@ -17,6 +17,21 @@ services:
       - ./build/mcu:/workspace/output
     network_mode: none
 
+  test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.build-linux
+    volumes:
+      - ./tests:/workspace/tests:ro
+    network_mode: none
+    command: >
+      bash -c "
+        cd /workspace &&
+        cmake -B build-test -DBUILD_TESTS=ON -DBUILD_LINUX=OFF -DBUILD_MCU=OFF &&
+        cmake --build build-test &&
+        ctest --test-dir build-test --output-on-failure
+      "
+
   analysis:
     build:
       context: .
@@ -24,22 +39,18 @@ services:
     volumes:
       - .:/workspace/src:ro
       - ./results/analysis:/workspace/output
+    user: root
     depends_on:
       build-linux:
         condition: service_completed_successfully
       build-mcu:
         condition: service_completed_successfully
-    command: >
-      bash -c "
-        echo '=== MISRA Analysis ===' &&
-        cppcheck --enable=all --std=c11
-          --suppress=missingIncludeSystem
-          /workspace/src/src/common/
-          /workspace/src/src/linux/
-          /workspace/src/src/mcu/
-          --xml 2>/workspace/output/cppcheck.xml &&
-        echo '=== Analysis Complete ==='
-      "
+    command: >-
+      bash -c "echo '=== MISRA Analysis ===' &&
+      cppcheck --enable=all --std=c11 --suppress=missingIncludeSystem
+      /workspace/src/src/common/ /workspace/src/src/linux/ /workspace/src/src/mcu/
+      --xml 2>/workspace/output/cppcheck.xml &&
+      echo '=== Analysis Complete ==='"
 
   sil:
     build:
@@ -49,22 +60,25 @@ services:
       - ./build/linux:/workspace/artifacts/linux:ro
       - ./build/mcu:/workspace/artifacts/mcu:ro
       - ./tests:/workspace/tests:ro
-      - ./tools/sil:/workspace/sil:ro
+      - ./src:/workspace/src:ro
+      - ./CMakeLists.txt:/workspace/CMakeLists.txt:ro
+      - ./config:/workspace/config:ro
+      - ./cmake:/workspace/cmake:ro
       - ./results/sil:/workspace/results
     privileged: true
+    environment:
+      - PROJECT_ROOT=/workspace
     depends_on:
       build-linux:
         condition: service_completed_successfully
       build-mcu:
         condition: service_completed_successfully
-    command: >
-      bash -c "
-        echo '=== SIL Test Environment ===' &&
-        cd /workspace/tests &&
-        python3 -m pytest -v --timeout=60
-          --junitxml=/workspace/results/sil-results.xml
-          || true
-      "
+    user: root
+    command: >-
+      bash -c "echo '=== SIL Integration Tests ===' &&
+      echo 'Test plan: ITP-001 (docs/test/integration_test_spec/)' &&
+      cd /workspace/tests/integration &&
+      python3 -m pytest test_sil.py -v --timeout=60 --junitxml=/workspace/results/sil-results.xml"
 
   build-mcu-qemu:
     build:

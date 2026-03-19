@@ -212,10 +212,10 @@ WORKDIR /workspace
 |-----------|---------------|---------|
 | `./build/linux/` | `/workspace/artifacts/linux/` | Gateway binary |
 | `./build/mcu/` | `/workspace/artifacts/mcu/` | Firmware ELF/BIN |
-| `./build/yocto/` | `/workspace/artifacts/yocto/` | Rootfs + kernel image |
-| `./tests/` | `/workspace/tests/` | Test scripts |
-| `./tools/sil/` | `/workspace/sil/` | QEMU launch scripts |
-| `./results/` | `/workspace/results/` | Test reports output |
+| `./tests/` | `/workspace/tests/` | Test scripts (pytest) |
+| `./src/` | `/workspace/src/` | Source code (for MCU sim build) |
+| `./CMakeLists.txt` | `/workspace/CMakeLists.txt` | Build config (for native gateway build) |
+| `./results/sil/` | `/workspace/results/` | JUnit XML test reports |
 
 ### 3.4 sentinel-yocto
 
@@ -337,11 +337,15 @@ services:
     volumes:
       - ./build/linux:/workspace/artifacts/linux:ro
       - ./build/mcu:/workspace/artifacts/mcu:ro
-      - ./build/yocto:/workspace/artifacts/yocto:ro
       - ./tests:/workspace/tests:ro
-      - ./tools/sil:/workspace/sil:ro
+      - ./src:/workspace/src:ro
+      - ./CMakeLists.txt:/workspace/CMakeLists.txt:ro
+      - ./config:/workspace/config:ro
+      - ./cmake:/workspace/cmake:ro
       - ./results/sil:/workspace/results
-    privileged: true    # Required for QEMU TAP networking
+    user: root
+    environment:
+      - PROJECT_ROOT=/workspace
     depends_on:
       build-linux:
         condition: service_completed_successfully
@@ -371,12 +375,13 @@ volumes:
 
 | Command | Purpose |
 |---------|---------|
-| `docker compose up build-linux build-mcu` | Build both binaries |
-| `docker compose up analysis` | Run MISRA + static analysis |
-| `docker compose up sil` | Run SIL integration tests |
-| `docker compose --profile full up yocto` | Build Yocto image (slow, ~2h first time) |
-| `docker compose up` | Build + analysis + SIL (default pipeline) |
-| `docker compose run sil bash` | Interactive SIL shell for debugging |
+| `docker-compose run --rm build-linux` | Cross-compile Linux gateway (aarch64) |
+| `docker-compose run --rm build-mcu` | Cross-compile MCU firmware (Cortex-M33) |
+| `docker-compose run --rm test` | Run unit tests (native x86 build + ctest) |
+| `docker-compose run --rm sil` | Run SIL integration tests (ITP-001 via pytest) |
+| `docker-compose run --rm qemu-sil` | Run QEMU SIL with real ARM binaries |
+| `docker-compose run --rm analysis` | Run MISRA + static analysis |
+| `docker-compose run --rm sil bash` | Interactive SIL shell for debugging |
 
 ## 5. SIL Environment Specification
 

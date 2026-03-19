@@ -33,5 +33,5 @@ RUN mkdir -p /workspace/output && \
     cp build/sentinel-mcu.map /workspace/output/ 2>/dev/null || true && \
     ls -la /workspace/output/
 
-FROM scratch AS artifact
-COPY --from=build /workspace/output/ /
+USER root
+CMD ["bash", "-c", "cp /workspace/build/sentinel-mcu /workspace/output/sentinel-mcu.elf 2>/dev/null; cp /workspace/build/sentinel-mcu.bin /workspace/output/ 2>/dev/null; cp /workspace/build/sentinel-mcu.map /workspace/output/ 2>/dev/null; echo 'MCU artifacts copied to output'"]
