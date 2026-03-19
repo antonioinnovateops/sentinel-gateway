@@ -47,4 +47,5 @@ RUN mkdir -p /workspace/output && \
     cp build/sentinel-mcu-qemu.map /workspace/output/ 2>/dev/null || true && \
     ls -la /workspace/output/
 
-CMD ["bash", "-c", "cp /workspace/build/sentinel-mcu-qemu /workspace/output/ 2>/dev/null || true && echo 'QEMU MCU firmware (user-mode) copied to output'"]
+USER root
+CMD ["bash", "-c", "cp /workspace/build/sentinel-mcu-qemu /workspace/output/ && cp /workspace/build/sentinel-mcu-qemu.map /workspace/output/ 2>/dev/null; echo 'QEMU MCU firmware (user-mode) copied to output'"]

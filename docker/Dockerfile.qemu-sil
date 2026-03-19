@@ -29,6 +29,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     cmake \
     make \
+    # Interactive tools
+    socat \
+    netcat-openbsd \
     # Debugging tools
     strace \
     file \

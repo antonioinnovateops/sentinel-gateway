@@ -139,7 +139,7 @@ sentinel_err_t gateway_init(void)
     err = transport_connect_command(mcu_ip);
     if (err != SENTINEL_OK) {
         fprintf(stderr, "[GW] Warning: MCU not yet available on %s:%u\n",
-                SENTINEL_MCU_IP, SENTINEL_PORT_COMMAND);
+                mcu_ip, SENTINEL_PORT_COMMAND);
         /* Non-fatal — will retry */
     }
 
