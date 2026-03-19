@@ -21,5 +21,6 @@ sentinel_err_t health_monitor_init(void);
 sentinel_err_t health_monitor_process_health(const uint8_t *payload, size_t len);
 sentinel_err_t health_monitor_get_state(linux_health_state_t *out);
 void health_monitor_tick(uint64_t now_ms);
+void health_monitor_get_mcu_version(uint32_t *major, uint32_t *minor);
 
 #endif /* HEALTH_MONITOR_H */

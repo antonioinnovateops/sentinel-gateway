@@ -84,10 +84,12 @@ class TestIT08_DiagnosticInterface:
             f"Expected command list, got: {response}"
 
     def test_version(self, diag):
-        """version returns firmware version (SYS-050)."""
+        """version returns both linux and MCU versions (SYS-050)."""
         response = send_diag(diag, "version")
         assert "linux=" in response, \
             f"Expected linux= version, got: {response}"
+        assert "mcu=" in response, \
+            f"Expected mcu= version, got: {response}"
 
     def test_status(self, diag):
         """status returns system state (SYS-049)."""
@@ -111,29 +113,27 @@ class TestIT01_SensorDataFlow:
     """Sensor data flows from MCU to gateway, queryable via diagnostics."""
 
     def test_sensor_read_ch0(self, diag):
-        """sensor read 0 returns channel 0 data (SYS-001, SYS-047)."""
+        """sensor read 0 returns channel 0 with live data (SYS-001, SYS-047)."""
         response = send_diag(diag, "sensor read 0")
         assert "ch=0" in response, \
             f"Expected sensor reading for ch=0, got: {response}"
+        assert "raw=" in response, \
+            f"Expected raw= field, got: {response}"
 
     def test_sensor_read_ch1(self, diag):
-        """sensor read 1 returns data (not error) for valid channel (SYS-001).
-
-        Note: sensor_proxy_process() does not yet decode protobuf payloads,
-        so channel field in response may be 0. This test verifies the
-        diagnostic path works without error for a valid channel.
-        """
+        """sensor read 1 returns channel 1 data (SYS-001)."""
         response = send_diag(diag, "sensor read 1")
-        assert "ERROR" not in response.upper(), \
-            f"Channel 1 should be valid, got error: {response}"
-        assert "raw=" in response, \
-            f"Expected raw= field in response, got: {response}"
+        assert "ch=1" in response, \
+            f"Expected ch=1 in response, got: {response}"
 
     def test_sensor_has_calibrated_value(self, diag):
-        """Sensor response includes raw and calibrated values (SYS-005)."""
+        """Sensor response includes non-zero calibrated values (SYS-005)."""
         response = send_diag(diag, "sensor read 0")
         assert "raw=" in response and "cal=" in response, \
             f"Expected raw= and cal= fields, got: {response}"
+        # MCU sim produces ADC ~2048 for ch0 → cal should be non-zero
+        assert "cal=0.000" not in response, \
+            f"Calibrated value should be non-zero (MCU data flowing), got: {response}"
 
     def test_sensor_invalid_channel(self, diag):
         """Invalid channel returns error (SYS-003)."""
@@ -165,10 +165,12 @@ class TestIT04_HeartbeatMonitoring:
     """MCU health is tracked and reported via status command."""
 
     def test_status_shows_state(self, diag):
-        """status returns system state (SYS-038, SYS-049)."""
+        """status returns MCU state from decoded health (SYS-038, SYS-049)."""
         response = send_diag(diag, "status")
         assert "state=" in response, \
             f"Expected state= in response, got: {response}"
+        assert "state=NORMAL" in response or "state=INIT" in response, \
+            f"Expected NORMAL or INIT state, got: {response}"
 
     def test_status_shows_comm(self, diag):
         """status shows communication status (SYS-041)."""

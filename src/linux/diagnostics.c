@@ -69,8 +69,16 @@ sentinel_err_t diagnostics_process_command(const char *cmd, char *response,
         }
 
     } else if (strncmp(cmd, "version", 7) == 0) {
-        snprintf(response, response_size,
-                 "linux=%s mcu=pending\n", SENTINEL_VERSION);
+        uint32_t mcu_major = 0, mcu_minor = 0;
+        health_monitor_get_mcu_version(&mcu_major, &mcu_minor);
+        if (mcu_major > 0) {
+            snprintf(response, response_size,
+                     "linux=%s mcu=%u.%u\n",
+                     SENTINEL_VERSION, mcu_major, mcu_minor);
+        } else {
+            snprintf(response, response_size,
+                     "linux=%s mcu=not_connected\n", SENTINEL_VERSION);
+        }
 
     } else if (strncmp(cmd, "help", 4) == 0) {
         snprintf(response, response_size,

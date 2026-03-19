@@ -2,6 +2,18 @@
  * @file health_monitor.c
  * @brief SW-05: MCU health monitoring, comm loss detection, recovery
  * @implements SWE-042 through SWE-045
+ *
+ * Decodes HealthStatus protobuf from MCU, tracks comm state.
+ * Protobuf field layout (matches MCU protobuf_handler.c):
+ *   Field 1 (LEN): MessageHeader {1:seq, 2:timestamp, 3:version{1:major,2:minor}}
+ *   Field 2 (VARINT): state
+ *   Field 3 (VARINT): comm_status
+ *   Field 4 (VARINT): uptime_s
+ *   Field 5 (VARINT): watchdog_resets
+ *   Field 7 (VARINT): free_stack
+ *   Field 8 (VARINT): fault_code
+ *   Field 9 (FIXED32): fan_duty
+ *   Field 10 (FIXED32): valve_duty
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -24,11 +36,94 @@ static linux_health_state_t g_health;
 static uint32_t g_recovery_attempts = 0U;
 static uint64_t g_last_health_received_ms = 0U;
 
+/* MCU version extracted from health message header */
+static uint32_t g_mcu_version_major = 0U;
+static uint32_t g_mcu_version_minor = 0U;
+
+/* ---- Minimal protobuf decoder ---- */
+
+static size_t dec_varint(const uint8_t *buf, size_t len, uint64_t *val)
+{
+    *val = 0;
+    size_t shift = 0;
+    for (size_t i = 0; i < len && i < 10U; i++) {
+        *val |= (uint64_t)(buf[i] & 0x7FU) << shift;
+        shift += 7;
+        if ((buf[i] & 0x80U) == 0) { return i + 1; }
+    }
+    return 0;
+}
+
+static float dec_float32(const uint8_t *buf)
+{
+    uint32_t bits = (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) |
+                    ((uint32_t)buf[2] << 16) | ((uint32_t)buf[3] << 24);
+    float val;
+    memcpy(&val, &bits, sizeof(val));
+    return val;
+}
+
 static uint64_t get_ms(void)
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)(ts.tv_nsec / 1000000L);
+}
+
+/* Decode version sub-message: {1:major, 2:minor} */
+static void decode_version(const uint8_t *buf, size_t len)
+{
+    size_t pos = 0;
+    while (pos < len) {
+        uint64_t tag;
+        size_t n = dec_varint(buf + pos, len - pos, &tag);
+        if (n == 0) { break; }
+        pos += n;
+        uint32_t field = (uint32_t)(tag >> 3);
+        uint32_t wtype = (uint32_t)(tag & 0x07);
+
+        if (wtype == 0) {
+            uint64_t v;
+            n = dec_varint(buf + pos, len - pos, &v);
+            if (n == 0) { break; }
+            pos += n;
+            if (field == 1) { g_mcu_version_major = (uint32_t)v; }
+            else if (field == 2) { g_mcu_version_minor = (uint32_t)v; }
+        } else {
+            break;
+        }
+    }
+}
+
+/* Decode MessageHeader sub-message: {1:seq, 2:timestamp, 3:version} */
+static void decode_header(const uint8_t *buf, size_t len)
+{
+    size_t pos = 0;
+    while (pos < len) {
+        uint64_t tag;
+        size_t n = dec_varint(buf + pos, len - pos, &tag);
+        if (n == 0) { break; }
+        pos += n;
+        uint32_t field = (uint32_t)(tag >> 3);
+        uint32_t wtype = (uint32_t)(tag & 0x07);
+
+        if (wtype == 0) { /* varint — skip seq/timestamp */
+            uint64_t v;
+            n = dec_varint(buf + pos, len - pos, &v);
+            if (n == 0) { break; }
+            pos += n;
+        } else if (wtype == 2) { /* length-delimited */
+            uint64_t slen;
+            n = dec_varint(buf + pos, len - pos, &slen);
+            if (n == 0) { break; }
+            pos += n;
+            if (pos + slen > len) { break; }
+            if (field == 3) { decode_version(buf + pos, (size_t)slen); }
+            pos += (size_t)slen;
+        } else {
+            break;
+        }
+    }
 }
 
 sentinel_err_t health_monitor_init(void)
@@ -37,20 +132,61 @@ sentinel_err_t health_monitor_init(void)
     g_hm_state = HM_MONITORING;
     g_recovery_attempts = 0U;
     g_last_health_received_ms = get_ms();
+    g_mcu_version_major = 0U;
+    g_mcu_version_minor = 0U;
     return SENTINEL_OK;
 }
 
 sentinel_err_t health_monitor_process_health(const uint8_t *payload, size_t len)
 {
-    /* TODO: Decode HealthStatus protobuf */
-    (void)payload;
-    (void)len;
+    if (payload == NULL || len == 0) {
+        return SENTINEL_ERR_INVALID_ARG;
+    }
+
+    /* Decode protobuf fields */
+    size_t pos = 0;
+    while (pos < len) {
+        uint64_t tag;
+        size_t n = dec_varint(payload + pos, len - pos, &tag);
+        if (n == 0) { break; }
+        pos += n;
+        uint32_t field = (uint32_t)(tag >> 3);
+        uint32_t wtype = (uint32_t)(tag & 0x07);
+
+        if (wtype == 0) { /* varint */
+            uint64_t v;
+            n = dec_varint(payload + pos, len - pos, &v);
+            if (n == 0) { break; }
+            pos += n;
+            switch (field) {
+                case 2: g_health.state = (system_state_t)v; break;
+                /* case 3: comm_status — managed locally */
+                case 4: g_health.uptime_s = (uint32_t)v; break;
+                case 5: g_health.watchdog_resets = (uint32_t)v; break;
+                default: break;
+            }
+        } else if (wtype == 5) { /* fixed32 */
+            if (pos + 4 > len) { break; }
+            /* fields 9, 10: fan_duty, valve_duty — not stored in health state */
+            (void)dec_float32(payload + pos);
+            pos += 4;
+        } else if (wtype == 2) { /* length-delimited */
+            uint64_t slen;
+            n = dec_varint(payload + pos, len - pos, &slen);
+            if (n == 0) { break; }
+            pos += n;
+            if (pos + slen > len) { break; }
+            if (field == 1) { decode_header(payload + pos, (size_t)slen); }
+            pos += (size_t)slen;
+        } else {
+            break;
+        }
+    }
 
     g_last_health_received_ms = get_ms();
     g_health.last_health_ms = g_last_health_received_ms;
     g_health.comm_ok = true;
 
-    /* If we were in COMM_LOSS and got health message, MCU is back */
     if (g_hm_state == HM_COMM_LOSS || g_hm_state == HM_RECOVERING) {
         g_hm_state = HM_MONITORING;
         g_recovery_attempts = 0U;
@@ -82,11 +218,9 @@ void health_monitor_tick(uint64_t now_ms)
                 g_hm_state = HM_FAULT;
                 logger_write_event("FAULT", "Recovery failed after 3 attempts");
             }
-            /* Recovery logic: USB power cycle, TCP reconnect, state sync */
             break;
 
         case HM_FAULT:
-            /* Stay in fault until manual intervention */
             break;
 
         default:
@@ -102,4 +236,10 @@ sentinel_err_t health_monitor_get_state(linux_health_state_t *out)
     }
     *out = g_health;
     return SENTINEL_OK;
+}
+
+void health_monitor_get_mcu_version(uint32_t *major, uint32_t *minor)
+{
+    if (major != NULL) { *major = g_mcu_version_major; }
+    if (minor != NULL) { *minor = g_mcu_version_minor; }
 }
