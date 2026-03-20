@@ -202,6 +202,7 @@ class QEMUManager:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             env=env,
+            cwd="/tmp",  # Writable dir for log files
             preexec_fn=os.setsid,
         )
         return self.gw_proc
