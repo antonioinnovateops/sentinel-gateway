@@ -35,6 +35,10 @@ static hm_state_t g_hm_state = HM_MONITORING;
 static linux_health_state_t g_health;
 static uint32_t g_recovery_attempts = 0U;
 static uint64_t g_last_health_received_ms = 0U;
+static uint64_t g_recovery_start_ms = 0U;  /* Timestamp when recovery started */
+
+/* Recovery timing per SYS-042: 5 seconds between attempts */
+#define RECOVERY_DELAY_MS 5000U
 
 /* MCU version extracted from health message header */
 static uint32_t g_mcu_version_major = 0U;
@@ -132,6 +136,7 @@ sentinel_err_t health_monitor_init(void)
     g_hm_state = HM_MONITORING;
     g_recovery_attempts = 0U;
     g_last_health_received_ms = get_ms();
+    g_recovery_start_ms = 0U;
     g_mcu_version_major = 0U;
     g_mcu_version_minor = 0U;
     return SENTINEL_OK;
@@ -203,20 +208,34 @@ void health_monitor_tick(uint64_t now_ms)
             if ((now_ms - g_last_health_received_ms) >= SENTINEL_COMM_TIMEOUT_MS) {
                 g_hm_state = HM_COMM_LOSS;
                 g_health.comm_ok = false;
+                g_recovery_start_ms = now_ms;
                 logger_write_event("COMM_LOSS", "MCU health timeout");
             }
             break;
 
         case HM_COMM_LOSS:
+            /* Transition to RECOVERING and start first recovery attempt */
             g_hm_state = HM_RECOVERING;
-            g_recovery_attempts++;
+            g_recovery_attempts = 1U;
+            g_recovery_start_ms = now_ms;
             logger_write_event("RECOVERY_START", "Attempting reconnection");
+            /* TODO: Implement actual reconnection via transport layer */
+            /* transport_reconnect_command(); */
             break;
 
         case HM_RECOVERING:
-            if (g_recovery_attempts >= 3U) {
-                g_hm_state = HM_FAULT;
-                logger_write_event("FAULT", "Recovery failed after 3 attempts");
+            /* Wait RECOVERY_DELAY_MS (5 seconds per SYS-042) before next attempt */
+            if ((now_ms - g_recovery_start_ms) >= RECOVERY_DELAY_MS) {
+                if (g_recovery_attempts >= 3U) {
+                    g_hm_state = HM_FAULT;
+                    logger_write_event("FAULT", "Recovery failed after 3 attempts");
+                } else {
+                    g_recovery_attempts++;
+                    g_recovery_start_ms = now_ms;
+                    logger_write_event("RECOVERY_RETRY", "Retrying reconnection");
+                    /* TODO: Implement actual reconnection via transport layer */
+                    /* transport_reconnect_command(); */
+                }
             }
             break;
 
