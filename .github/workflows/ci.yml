@@ -16,16 +16,11 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            cmake gcc g++ \
-            libprotobuf-c-dev protobuf-c-compiler protobuf-compiler \
-            cppcheck
+          sudo apt-get install -y cmake gcc g++ cppcheck
 
-      - name: Generate protobuf code
-        run: |
-          mkdir -p src/linux/app/protobuf_handler
-          protoc-c --c_out=src/linux/app/protobuf_handler \
-            -Isrc/proto src/proto/sentinel.proto
+      # NOTE: Protobuf code generation is intentionally skipped.
+      # The gateway uses hand-rolled decoders (protobuf_lite.c) for safety-critical
+      # embedded systems - avoids external code generation dependencies.
 
       - name: Build
         run: |
@@ -49,18 +44,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-arm-none-eabi cmake
 
-      - name: Install nanopb
-        run: |
-          git clone --depth 1 https://github.com/nanopb/nanopb.git tools/nanopb
-
-      - name: Generate protobuf code
-        run: |
-          mkdir -p src/mcu/app/protobuf_handler
-          cd tools/nanopb/generator
-          python3 nanopb_generator.py \
-            -I ../../../src/proto \
-            ../../../src/proto/sentinel.proto \
-            -D ../../../src/mcu/app/protobuf_handler
+      # NOTE: nanopb code generation is intentionally skipped.
+      # The MCU firmware uses hand-rolled protobuf encoder/decoder (protobuf_handler.c)
+      # for deterministic behavior in safety-critical embedded systems.
 
       - name: Build
         run: |
