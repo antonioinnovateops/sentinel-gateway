@@ -1,0 +1,33 @@
+---
+# Sentinel Gateway — C formatting rules
+# Based on LLVM style with embedded-friendly tweaks
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+
+# Braces
+BreakBeforeBraces: Linux
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+# Alignment
+AlignConsecutiveMacros: true
+AlignConsecutiveAssignments: false
+AlignTrailingComments: true
+
+# Includes
+SortIncludes: true
+IncludeBlocks: Preserve
+
+# Pointers
+PointerAlignment: Right
+DerivePointerAlignment: false
+
+# Misc
+SpaceAfterCStyleCast: false
+SpaceBeforeParens: ControlStatements
+IndentCaseLabels: false
+...

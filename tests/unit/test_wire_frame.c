@@ -123,6 +123,90 @@ void test_wire_frame_round_trip(void)
     TEST_ASSERT_EQUAL_MEMORY(payload, frame + WIRE_FRAME_HEADER_SIZE, 4);
 }
 
+/* TC-WF-009: Decode rejects maximum uint32 payload length */
+void test_wire_frame_decode_max_payload_len(void)
+{
+    uint8_t frame[] = {0xFF, 0xFF, 0xFF, 0xFF, 0x01};
+    uint8_t msg_type;
+    uint32_t payload_len;
+
+    sentinel_err_t err = wire_frame_decode_header(frame, 5, &msg_type, &payload_len);
+
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_OUT_OF_RANGE, err);
+}
+
+/* TC-WF-010: Decode rejects NULL output pointers */
+void test_wire_frame_decode_null_outputs(void)
+{
+    uint8_t frame[] = {0x01, 0x00, 0x00, 0x00, 0x01};
+    uint8_t msg_type;
+    uint32_t payload_len;
+
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_INVALID_ARG,
+        wire_frame_decode_header(NULL, 5, &msg_type, &payload_len));
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_INVALID_ARG,
+        wire_frame_decode_header(frame, 5, NULL, &payload_len));
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_INVALID_ARG,
+        wire_frame_decode_header(frame, 5, &msg_type, NULL));
+}
+
+/* TC-WF-011: Decode with zero-length buffer */
+void test_wire_frame_decode_zero_length_buffer(void)
+{
+    uint8_t frame[] = {0x00};
+    uint8_t msg_type;
+    uint32_t payload_len;
+
+    sentinel_err_t err = wire_frame_decode_header(frame, 0, &msg_type, &payload_len);
+
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_INVALID_ARG, err);
+}
+
+/* TC-WF-012: Decode header with zero payload length is valid */
+void test_wire_frame_decode_zero_payload_len(void)
+{
+    uint8_t frame[] = {0x00, 0x00, 0x00, 0x00, MSG_TYPE_HEALTH_STATUS};
+    uint8_t msg_type;
+    uint32_t payload_len;
+
+    sentinel_err_t err = wire_frame_decode_header(frame, 5, &msg_type, &payload_len);
+
+    TEST_ASSERT_EQUAL(SENTINEL_OK, err);
+    TEST_ASSERT_EQUAL(MSG_TYPE_HEALTH_STATUS, msg_type);
+    TEST_ASSERT_EQUAL(0, payload_len);
+}
+
+/* TC-WF-013: Decode exactly at max valid payload boundary */
+void test_wire_frame_decode_boundary_payload_len(void)
+{
+    /* WIRE_FRAME_MAX_PAYLOAD encoded as LE uint32 */
+    uint32_t max_payload = WIRE_FRAME_MAX_PAYLOAD;
+    uint8_t frame[5];
+    frame[0] = (uint8_t)(max_payload & 0xFF);
+    frame[1] = (uint8_t)((max_payload >> 8) & 0xFF);
+    frame[2] = (uint8_t)((max_payload >> 16) & 0xFF);
+    frame[3] = (uint8_t)((max_payload >> 24) & 0xFF);
+    frame[4] = MSG_TYPE_SENSOR_DATA;
+
+    uint8_t msg_type;
+    uint32_t payload_len;
+
+    sentinel_err_t err = wire_frame_decode_header(frame, 5, &msg_type, &payload_len);
+
+    TEST_ASSERT_EQUAL(SENTINEL_OK, err);
+    TEST_ASSERT_EQUAL(max_payload, payload_len);
+
+    /* One above max should fail */
+    uint32_t over = max_payload + 1;
+    frame[0] = (uint8_t)(over & 0xFF);
+    frame[1] = (uint8_t)((over >> 8) & 0xFF);
+    frame[2] = (uint8_t)((over >> 16) & 0xFF);
+    frame[3] = (uint8_t)((over >> 24) & 0xFF);
+
+    err = wire_frame_decode_header(frame, 5, &msg_type, &payload_len);
+    TEST_ASSERT_EQUAL(SENTINEL_ERR_OUT_OF_RANGE, err);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -134,5 +218,11 @@ int main(void)
     RUN_TEST(test_wire_frame_decode_short_buffer);
     RUN_TEST(test_wire_frame_decode_oversized_length);
     RUN_TEST(test_wire_frame_round_trip);
+    /* Negative / boundary tests [T-04] */
+    RUN_TEST(test_wire_frame_decode_max_payload_len);
+    RUN_TEST(test_wire_frame_decode_null_outputs);
+    RUN_TEST(test_wire_frame_decode_zero_length_buffer);
+    RUN_TEST(test_wire_frame_decode_zero_payload_len);
+    RUN_TEST(test_wire_frame_decode_boundary_payload_len);
     return UNITY_END();
 }
