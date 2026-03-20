@@ -56,6 +56,7 @@ if(BUILD_LINUX)
         src/linux/diagnostics.c
         src/linux/config_manager.c
         src/linux/logger.c
+        src/linux/protobuf_lite.c
         ${COMMON_SOURCES}
     )
 

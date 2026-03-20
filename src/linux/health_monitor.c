@@ -19,6 +19,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "health_monitor.h"
+#include "protobuf_lite.h"
 #include "logger.h"
 #include <string.h>
 #include <time.h>
@@ -44,29 +45,6 @@ static uint64_t g_recovery_start_ms = 0U;  /* Timestamp when recovery started */
 static uint32_t g_mcu_version_major = 0U;
 static uint32_t g_mcu_version_minor = 0U;
 
-/* ---- Minimal protobuf decoder ---- */
-
-static size_t dec_varint(const uint8_t *buf, size_t len, uint64_t *val)
-{
-    *val = 0;
-    size_t shift = 0;
-    for (size_t i = 0; i < len && i < 10U; i++) {
-        *val |= (uint64_t)(buf[i] & 0x7FU) << shift;
-        shift += 7;
-        if ((buf[i] & 0x80U) == 0) { return i + 1; }
-    }
-    return 0;
-}
-
-static float dec_float32(const uint8_t *buf)
-{
-    uint32_t bits = (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) |
-                    ((uint32_t)buf[2] << 16) | ((uint32_t)buf[3] << 24);
-    float val;
-    memcpy(&val, &bits, sizeof(val));
-    return val;
-}
-
 static uint64_t get_ms(void)
 {
     struct timespec ts;
@@ -80,7 +58,7 @@ static void decode_version(const uint8_t *buf, size_t len)
     size_t pos = 0;
     while (pos < len) {
         uint64_t tag;
-        size_t n = dec_varint(buf + pos, len - pos, &tag);
+        size_t n = pb_dec_varint(buf + pos, len - pos, &tag);
         if (n == 0) { break; }
         pos += n;
         uint32_t field = (uint32_t)(tag >> 3);
@@ -88,7 +66,7 @@ static void decode_version(const uint8_t *buf, size_t len)
 
         if (wtype == 0) {
             uint64_t v;
-            n = dec_varint(buf + pos, len - pos, &v);
+            n = pb_dec_varint(buf + pos, len - pos, &v);
             if (n == 0) { break; }
             pos += n;
             if (field == 1) { g_mcu_version_major = (uint32_t)v; }
@@ -105,7 +83,7 @@ static void decode_header(const uint8_t *buf, size_t len)
     size_t pos = 0;
     while (pos < len) {
         uint64_t tag;
-        size_t n = dec_varint(buf + pos, len - pos, &tag);
+        size_t n = pb_dec_varint(buf + pos, len - pos, &tag);
         if (n == 0) { break; }
         pos += n;
         uint32_t field = (uint32_t)(tag >> 3);
@@ -113,12 +91,12 @@ static void decode_header(const uint8_t *buf, size_t len)
 
         if (wtype == 0) { /* varint — skip seq/timestamp */
             uint64_t v;
-            n = dec_varint(buf + pos, len - pos, &v);
+            n = pb_dec_varint(buf + pos, len - pos, &v);
             if (n == 0) { break; }
             pos += n;
         } else if (wtype == 2) { /* length-delimited */
             uint64_t slen;
-            n = dec_varint(buf + pos, len - pos, &slen);
+            n = pb_dec_varint(buf + pos, len - pos, &slen);
             if (n == 0) { break; }
             pos += n;
             if (pos + slen > len) { break; }
@@ -152,7 +130,7 @@ sentinel_err_t health_monitor_process_health(const uint8_t *payload, size_t len)
     size_t pos = 0;
     while (pos < len) {
         uint64_t tag;
-        size_t n = dec_varint(payload + pos, len - pos, &tag);
+        size_t n = pb_dec_varint(payload + pos, len - pos, &tag);
         if (n == 0) { break; }
         pos += n;
         uint32_t field = (uint32_t)(tag >> 3);
@@ -160,7 +138,7 @@ sentinel_err_t health_monitor_process_health(const uint8_t *payload, size_t len)
 
         if (wtype == 0) { /* varint */
             uint64_t v;
-            n = dec_varint(payload + pos, len - pos, &v);
+            n = pb_dec_varint(payload + pos, len - pos, &v);
             if (n == 0) { break; }
             pos += n;
             switch (field) {
@@ -173,11 +151,11 @@ sentinel_err_t health_monitor_process_health(const uint8_t *payload, size_t len)
         } else if (wtype == 5) { /* fixed32 */
             if (pos + 4 > len) { break; }
             /* fields 9, 10: fan_duty, valve_duty — not stored in health state */
-            (void)dec_float32(payload + pos);
+            (void)pb_dec_float32(payload + pos);
             pos += 4;
         } else if (wtype == 2) { /* length-delimited */
             uint64_t slen;
-            n = dec_varint(payload + pos, len - pos, &slen);
+            n = pb_dec_varint(payload + pos, len - pos, &slen);
             if (n == 0) { break; }
             pos += n;
             if (pos + slen > len) { break; }

@@ -11,6 +11,7 @@
  */
 
 #include "sensor_proxy.h"
+#include "protobuf_lite.h"
 #include "logger.h"
 #include <string.h>
 #include <stdio.h>
@@ -18,29 +19,6 @@
 static sensor_reading_t g_latest[SENTINEL_MAX_CHANNELS];
 static uint32_t g_msg_count = 0U;
 static uint32_t g_err_count = 0U;
-
-/* ---- Minimal protobuf decoder ---- */
-
-static size_t dec_varint(const uint8_t *buf, size_t len, uint64_t *val)
-{
-    *val = 0;
-    size_t shift = 0;
-    for (size_t i = 0; i < len && i < 10U; i++) {
-        *val |= (uint64_t)(buf[i] & 0x7FU) << shift;
-        shift += 7;
-        if ((buf[i] & 0x80U) == 0) { return i + 1; }
-    }
-    return 0; /* error */
-}
-
-static float dec_float32(const uint8_t *buf)
-{
-    uint32_t bits = (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) |
-                    ((uint32_t)buf[2] << 16) | ((uint32_t)buf[3] << 24);
-    float val;
-    memcpy(&val, &bits, sizeof(val));
-    return val;
-}
 
 /* Decode a SensorReading sub-message: {1:channel, 2:raw, 3:cal} */
 static void decode_reading(const uint8_t *buf, size_t len)
@@ -52,7 +30,7 @@ static void decode_reading(const uint8_t *buf, size_t len)
 
     while (pos < len) {
         uint64_t tag;
-        size_t n = dec_varint(buf + pos, len - pos, &tag);
+        size_t n = pb_dec_varint(buf + pos, len - pos, &tag);
         if (n == 0) { break; }
         pos += n;
         uint32_t field = (uint32_t)(tag >> 3);
@@ -60,18 +38,18 @@ static void decode_reading(const uint8_t *buf, size_t len)
 
         if (wtype == 0) { /* varint */
             uint64_t v;
-            n = dec_varint(buf + pos, len - pos, &v);
+            n = pb_dec_varint(buf + pos, len - pos, &v);
             if (n == 0) { break; }
             pos += n;
             if (field == 1) { channel = (uint8_t)v; }
             else if (field == 2) { raw = (uint32_t)v; }
         } else if (wtype == 5) { /* fixed32 */
             if (pos + 4 > len) { break; }
-            if (field == 3) { cal = dec_float32(buf + pos); }
+            if (field == 3) { cal = pb_dec_float32(buf + pos); }
             pos += 4;
         } else if (wtype == 2) { /* length-delimited — skip */
             uint64_t slen;
-            n = dec_varint(buf + pos, len - pos, &slen);
+            n = pb_dec_varint(buf + pos, len - pos, &slen);
             if (n == 0) { break; }
             pos += n + (size_t)slen;
         } else {
@@ -105,7 +83,7 @@ sentinel_err_t sensor_proxy_process(const uint8_t *payload, size_t len)
     size_t pos = 0;
     while (pos < len) {
         uint64_t tag;
-        size_t n = dec_varint(payload + pos, len - pos, &tag);
+        size_t n = pb_dec_varint(payload + pos, len - pos, &tag);
         if (n == 0) { break; }
         pos += n;
         uint32_t field = (uint32_t)(tag >> 3);
@@ -113,13 +91,13 @@ sentinel_err_t sensor_proxy_process(const uint8_t *payload, size_t len)
 
         if (wtype == 0) { /* varint */
             uint64_t v;
-            n = dec_varint(payload + pos, len - pos, &v);
+            n = pb_dec_varint(payload + pos, len - pos, &v);
             if (n == 0) { break; }
             pos += n;
             /* field 3 = sample_rate_hz — ignored for now */
         } else if (wtype == 2) { /* length-delimited */
             uint64_t slen;
-            n = dec_varint(payload + pos, len - pos, &slen);
+            n = pb_dec_varint(payload + pos, len - pos, &slen);
             if (n == 0) { break; }
             pos += n;
             if (pos + slen > len) { break; }
