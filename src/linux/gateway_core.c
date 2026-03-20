@@ -93,6 +93,10 @@ sentinel_err_t gateway_init(void)
     if (err != SENTINEL_OK) {
         /* Fallback to current directory */
         err = logger_init("sensor_data.jsonl", "events.jsonl");
+        if (err != SENTINEL_OK) {
+            fprintf(stderr, "[GW] Failed to initialize logger\n");
+            return err;
+        }
     }
 
     err = config_manager_init(NULL);

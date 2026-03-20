@@ -425,28 +425,29 @@ This document specifies the system requirements for the Sentinel Gateway. It ser
 - **Acceptance**: `telnet 192.168.7.1 5002` connects and accepts commands
 
 **[SYS-047] Read Sensor Command**
-- **Description**: The diagnostic interface shall support `READ_SENSOR <channel_id>` command, returning the latest calibrated value and timestamp
+- **Description**: The diagnostic interface shall support `sensor read <channel_id>` command, returning the latest calibrated value and timestamp
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [STKH-010]
-- **Acceptance**: `READ_SENSOR 0` returns temperature value
+- **Acceptance**: `sensor read 0` returns temperature value
+- **Note**: Lowercase command syntax provides better interactive UX (telnet-friendly)
 
 **[SYS-048] Set Actuator Command**
-- **Description**: The diagnostic interface shall support `SET_ACTUATOR <actuator_id> <value>` command, applying the value and returning confirmation
+- **Description**: The diagnostic interface shall support `actuator set <actuator_id> <value>` command, applying the value and returning confirmation
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [STKH-010]
-- **Acceptance**: `SET_ACTUATOR 0 50` sets fan to 50% and returns OK
+- **Acceptance**: `actuator set 0 50` sets fan to 50% and returns OK
 
 **[SYS-049] Get Status Command**
-- **Description**: The diagnostic interface shall support `GET_STATUS` command, returning system status including: communication state, MCU health, all sensor values, all actuator states
+- **Description**: The diagnostic interface shall support `status` command, returning system status including: communication state, MCU health, all sensor values, all actuator states
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [STKH-010]
 - **Acceptance**: Complete status dump returned as structured text
 
 **[SYS-050] Get Version Command**
-- **Description**: The diagnostic interface shall support `GET_VERSION` command, returning Linux and MCU firmware versions
+- **Description**: The diagnostic interface shall support `version` command, returning Linux and MCU firmware versions
 - **Type**: Functional
 - **Safety**: QM
 - **Source**: [STKH-010], [STKH-012]

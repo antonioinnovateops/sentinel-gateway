@@ -24,6 +24,12 @@
 #define MAX_EVENTS     8
 #define RX_BUF_SIZE    2048
 
+/* Per-connection receive buffer state */
+typedef struct {
+    uint8_t buf[RX_BUF_SIZE];
+    size_t pos;
+} conn_rx_state_t;
+
 /* Socket state */
 static int g_epoll_fd = -1;
 static int g_cmd_fd = -1;       /* Connected to MCU port 5000 */
@@ -37,16 +43,16 @@ static void *g_recv_ctx = NULL;
 static transport_diag_cb_t g_diag_cb = NULL;
 static void *g_diag_ctx = NULL;
 
+/* Per-connection receive buffers for wire frame reassembly */
+static conn_rx_state_t g_cmd_rx;   /* Command channel (port 5000) */
+static conn_rx_state_t g_tel_rx;   /* Telemetry channel (port 5001) */
+
 /* Diagnostic receive buffer (text, line-based) */
 static uint8_t g_diag_rx_buf[512];
 static size_t g_diag_rx_pos = 0U;
 
 /* Forward declarations */
 static void process_diag_data(int fd);
-
-/* Receive buffer for reassembling wire frames */
-static uint8_t g_rx_buf[RX_BUF_SIZE];
-static size_t g_rx_pos = 0U;
 
 static int set_nonblocking(int fd)
 {
@@ -96,6 +102,9 @@ sentinel_err_t transport_init(void)
     if (g_epoll_fd < 0) {
         return SENTINEL_ERR_INTERNAL;
     }
+    /* Initialize per-connection receive buffers */
+    (void)memset(&g_cmd_rx, 0, sizeof(g_cmd_rx));
+    (void)memset(&g_tel_rx, 0, sizeof(g_tel_rx));
     return SENTINEL_OK;
 }
 
@@ -154,7 +163,17 @@ sentinel_err_t transport_listen_diagnostics(void)
 
 static void process_received_data(int fd)
 {
-    ssize_t n = read(fd, g_rx_buf + g_rx_pos, RX_BUF_SIZE - g_rx_pos);
+    /* Select the appropriate per-connection buffer */
+    conn_rx_state_t *rx = NULL;
+    if (fd == g_cmd_fd) {
+        rx = &g_cmd_rx;
+    } else if (fd == g_tel_fd) {
+        rx = &g_tel_rx;
+    } else {
+        return; /* Unknown fd — ignore */
+    }
+
+    ssize_t n = read(fd, rx->buf + rx->pos, RX_BUF_SIZE - rx->pos);
     if (n <= 0) {
         if (n == 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) {
             /* Peer disconnected — clean up */
@@ -162,42 +181,42 @@ static void process_received_data(int fd)
             close(fd);
             if (fd == g_tel_fd) { g_tel_fd = -1; }
             if (fd == g_cmd_fd) { g_cmd_fd = -1; }
-            g_rx_pos = 0U;
+            rx->pos = 0U;
         }
         return;
     }
-    g_rx_pos += (size_t)n;
+    rx->pos += (size_t)n;
 
     /* Try to extract complete wire frames */
-    while (g_rx_pos >= WIRE_FRAME_HEADER_SIZE) {
+    while (rx->pos >= WIRE_FRAME_HEADER_SIZE) {
         uint8_t msg_type;
         uint32_t payload_len;
-        sentinel_err_t err = wire_frame_decode_header(g_rx_buf, g_rx_pos,
+        sentinel_err_t err = wire_frame_decode_header(rx->buf, rx->pos,
                                                        &msg_type, &payload_len);
         if (err != SENTINEL_OK) {
-            g_rx_pos = 0U; /* Discard corrupt data */
+            rx->pos = 0U; /* Discard corrupt data */
             break;
         }
 
         size_t frame_len = WIRE_FRAME_HEADER_SIZE + payload_len;
-        if (g_rx_pos < frame_len) {
+        if (rx->pos < frame_len) {
             break; /* Incomplete frame, wait for more data */
         }
 
         /* Dispatch complete frame */
         if (g_recv_cb != NULL) {
             g_recv_cb(msg_type,
-                      g_rx_buf + WIRE_FRAME_HEADER_SIZE,
+                      rx->buf + WIRE_FRAME_HEADER_SIZE,
                       payload_len,
                       g_recv_ctx);
         }
 
         /* Shift remaining data */
-        if (g_rx_pos > frame_len) {
-            (void)memmove(g_rx_buf, g_rx_buf + frame_len,
-                          g_rx_pos - frame_len);
+        if (rx->pos > frame_len) {
+            (void)memmove(rx->buf, rx->buf + frame_len,
+                          rx->pos - frame_len);
         }
-        g_rx_pos -= frame_len;
+        rx->pos -= frame_len;
     }
 }
 
