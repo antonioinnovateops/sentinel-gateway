@@ -45,8 +45,25 @@ static void on_diag_command(int client_fd, const char *cmd, void *ctx)
     char response[512];
     diagnostics_process_command(cmd, response, sizeof(response));
 
-    /* Send response back to diagnostic client */
-    (void)write(client_fd, response, strlen(response));
+    /* Ensure null-termination and calculate length safely */
+    response[sizeof(response) - 1] = '\0';
+    size_t len = strlen(response);
+
+    /* Write loop to handle partial writes */
+    size_t written = 0;
+    while (written < len) {
+        ssize_t n = write(client_fd, response + written, len - written);
+        if (n < 0) {
+            if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
+                continue;
+            }
+            break; /* Error: give up */
+        }
+        if (n == 0) {
+            break; /* Connection closed */
+        }
+        written += (size_t)n;
+    }
 }
 
 /* Message dispatch callback from transport layer */

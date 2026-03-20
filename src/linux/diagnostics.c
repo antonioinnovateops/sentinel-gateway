@@ -10,6 +10,8 @@
 #include "health_monitor.h"
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
+#include <stdlib.h>
 
 static const char *state_str(system_state_t s)
 {
@@ -46,7 +48,21 @@ sentinel_err_t diagnostics_process_command(const char *cmd, char *response,
                  health.comm_ok ? "OK" : "LOST");
 
     } else if (strncmp(cmd, "sensor read ", 12) == 0) {
-        uint8_t ch = (uint8_t)(cmd[12] - '0');
+        /* Parse channel number with validation */
+        const char *arg = cmd + 12;
+        if (!isdigit((unsigned char)arg[0])) {
+            snprintf(response, response_size, "ERROR: invalid channel\n");
+            return SENTINEL_OK;
+        }
+        char *endptr = NULL;
+        long ch_val = strtol(arg, &endptr, 10);
+        /* Check for parsing errors and bounds */
+        if (endptr == arg || (*endptr != '\0' && *endptr != ' ' && *endptr != '\n') ||
+            ch_val < 0 || ch_val >= SENTINEL_MAX_CHANNELS) {
+            snprintf(response, response_size, "ERROR: invalid channel\n");
+            return SENTINEL_OK;
+        }
+        uint8_t ch = (uint8_t)ch_val;
         sensor_reading_t r;
         sentinel_err_t err = sensor_proxy_get_latest(ch, &r);
         if (err == SENTINEL_OK) {

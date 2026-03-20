@@ -274,8 +274,26 @@ sentinel_err_t transport_send_command(const uint8_t *frame, size_t len)
     if (g_cmd_fd < 0) {
         return SENTINEL_ERR_COMM;
     }
-    ssize_t n = write(g_cmd_fd, frame, len);
-    return (n == (ssize_t)len) ? SENTINEL_OK : SENTINEL_ERR_COMM;
+
+    /* Write loop to handle partial writes */
+    size_t total_written = 0;
+    while (total_written < len) {
+        ssize_t n = write(g_cmd_fd, frame + total_written, len - total_written);
+        if (n < 0) {
+            if (errno == EINTR) {
+                continue; /* Retry on interrupt */
+            }
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                continue; /* Non-blocking socket: retry */
+            }
+            return SENTINEL_ERR_COMM;
+        }
+        if (n == 0) {
+            return SENTINEL_ERR_COMM; /* Connection closed */
+        }
+        total_written += (size_t)n;
+    }
+    return SENTINEL_OK;
 }
 
 void transport_set_recv_callback(transport_recv_cb_t cb, void *ctx)

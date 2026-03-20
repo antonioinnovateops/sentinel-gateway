@@ -23,6 +23,45 @@ static void get_iso_timestamp(char *buf, size_t len)
     snprintf(buf + n, len - (size_t)n, ".%03ldZ", ts.tv_nsec / 1000000L);
 }
 
+/**
+ * Escape a string for JSON output.
+ * Escapes backslash, double-quote, and control characters.
+ * @param src Source string (NULL-terminated)
+ * @param dst Destination buffer
+ * @param dst_size Size of destination buffer
+ */
+static void json_escape(const char *src, char *dst, size_t dst_size)
+{
+    if (dst_size == 0) { return; }
+    size_t j = 0;
+    for (size_t i = 0; src[i] != '\0' && j < dst_size - 1; i++) {
+        char c = src[i];
+        if (c == '\\' || c == '"') {
+            if (j + 2 >= dst_size) { break; }
+            dst[j++] = '\\';
+            dst[j++] = c;
+        } else if (c == '\n') {
+            if (j + 2 >= dst_size) { break; }
+            dst[j++] = '\\';
+            dst[j++] = 'n';
+        } else if (c == '\r') {
+            if (j + 2 >= dst_size) { break; }
+            dst[j++] = '\\';
+            dst[j++] = 'r';
+        } else if (c == '\t') {
+            if (j + 2 >= dst_size) { break; }
+            dst[j++] = '\\';
+            dst[j++] = 't';
+        } else if ((unsigned char)c < 0x20) {
+            /* Skip other control characters */
+            continue;
+        } else {
+            dst[j++] = c;
+        }
+    }
+    dst[j] = '\0';
+}
+
 sentinel_err_t logger_init(const char *sensor_path, const char *event_path)
 {
     if (sensor_path != NULL) {
@@ -34,6 +73,11 @@ sentinel_err_t logger_init(const char *sensor_path, const char *event_path)
     if (event_path != NULL) {
         g_event_fp = fopen(event_path, "a");
         if (g_event_fp == NULL) {
+            /* Clean up sensor file on partial failure */
+            if (g_sensor_fp != NULL) {
+                fclose(g_sensor_fp);
+                g_sensor_fp = NULL;
+            }
             return SENTINEL_ERR_INTERNAL;
         }
     }
@@ -66,9 +110,15 @@ sentinel_err_t logger_write_event(const char *event_type, const char *message)
     char ts[32];
     get_iso_timestamp(ts, sizeof(ts));
 
+    /* Escape strings for safe JSON output */
+    char type_escaped[64];
+    char msg_escaped[256];
+    json_escape(event_type, type_escaped, sizeof(type_escaped));
+    json_escape(message ? message : "", msg_escaped, sizeof(msg_escaped));
+
     fprintf(g_event_fp,
             "{\"ts\":\"%s\",\"type\":\"%s\",\"msg\":\"%s\"}\n",
-            ts, event_type, message ? message : "");
+            ts, type_escaped, msg_escaped);
     fflush(g_event_fp);
     return SENTINEL_OK;
 }
