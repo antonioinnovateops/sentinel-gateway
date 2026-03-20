@@ -22,6 +22,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <errno.h>
 
 static volatile sig_atomic_t g_running = 1;
 
